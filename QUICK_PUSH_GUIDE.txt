@@ -1,0 +1,76 @@
+========================================
+ QUICK GUIDE: Push to GitHub Now
+========================================
+
+Your code is ready! You just need a Personal Access Token.
+
+STEP 1: Generate Token (2 minutes)
+-----------------------------------
+1. Open browser and go to:
+   https://github.com/settings/tokens
+
+2. Click "Generate new token" → "Generate new token (classic)"
+
+3. Fill in:
+   - Note: "Gharu Hiraa Deployment"
+   - Expiration: 90 days (or your choice)
+   - Select scopes: 
+     ✓ Check "repo" (this checks all sub-items)
+
+4. Click "Generate token" at bottom
+
+5. COPY THE TOKEN IMMEDIATELY (you won't see it again!)
+   - It looks like: ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+
+STEP 2: Push to GitHub (30 seconds)
+-----------------------------------
+1. In PowerShell, run:
+   git push -u origin main
+
+2. When prompted for:
+   - Username: ubaidtra
+   - Password: PASTE YOUR TOKEN (not your GitHub password!)
+
+3. Press Enter
+
+4. Your code uploads to GitHub!
+
+
+STEP 3: Verify
+-----------------------------------
+Visit: https://github.com/ubaidtra/Gharu-Hiraa
+You should see all your files!
+
+
+WHAT IF IT FAILS?
+-----------------------------------
+If you see "Authentication failed":
+- Make sure you pasted the TOKEN, not your password
+- Passwords don't work anymore, only tokens
+- Generate a new token and try again
+
+
+NEXT STEPS AFTER SUCCESSFUL PUSH
+-----------------------------------
+1. Deploy to Vercel: https://vercel.com
+2. Import your GitHub repository
+3. Add environment variables
+4. Deploy!
+
+
+========================================
+ Alternative: Install GitHub CLI
+========================================
+
+For future ease (one-time setup):
+
+1. Run: winget install GitHub.cli
+2. Restart PowerShell
+3. Run: gh auth login
+4. Follow prompts
+
+This saves your credentials permanently!
+
+========================================
+
