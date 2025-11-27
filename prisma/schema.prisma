@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  username  String   @unique
+  password  String
+  role      String   // MANAGEMENT, ACCOUNTS, TEACHER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Student {
+  id               String           @id @default(auto()) @map("_id") @db.ObjectId
+  studentId        String           @unique
+  firstName        String
+  fatherName       String
+  lastName         String
+  dob              DateTime
+  address          String
+  gender           String           // MALE, FEMALE
+  registrationDate DateTime         @default(now())
+  phone            String?
+  guardianPhone    String?
+  photo            String?
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  halaqa           Halaqa?          @relation(fields: [halaqaId], references: [id])
+  halaqaId         String?          @db.ObjectId
+  learningRecords  LearningRecord[]
+  transactions     Transaction[]
+}
+
+model Teacher {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId      String         @unique
+  firstName      String
+  lastName       String
+  gender         String         // MALE, FEMALE
+  certificate    String?
+  dob            DateTime
+  photo          String?
+  address        String
+  phone          String?
+  hireDate       DateTime       @default(now())
+  employmentType String         // FULL_TIME, PART_TIME, VOLUNTEER
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  halaqas        Halaqa[]
+  learningRecords LearningRecord[]
+  reports        Report[]
+}
+
+model Halaqa {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  studentLevel String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  teacher      Teacher   @relation(fields: [teacherId], references: [id])
+  teacherId    String    @db.ObjectId
+  students     Student[]
+}
+
+model Transaction {
+  id          String          @id @default(auto()) @map("_id") @db.ObjectId
+  type        String          // REGISTRATION_FEE, SCHOOL_FEE, UNIFORM_FEE, OTHER_FEE, WITHDRAWAL
+  amount      Float
+  description String?
+  date        DateTime        @default(now())
+  photoUrl    String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  student     Student?        @relation(fields: [studentId], references: [id])
+  studentId   String?         @db.ObjectId
+}
+
+model LearningRecord {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  weekStartDate    DateTime
+  attendance       Int      @default(0)
+  surah            String?
+  dailyDars        String?
+  memorizedDays    Int      @default(0)
+  notMemorizedDays Int      @default(0)
+  rubuAmount       Float    @default(0)
+  murajaaFrom      String?
+  murajaaTo        String?
+  murajaaDays      Int      @default(0)
+  murajaaNotDays   Int      @default(0)
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  student          Student  @relation(fields: [studentId], references: [id])
+  studentId        String   @db.ObjectId
+  teacher          Teacher  @relation(fields: [teacherId], references: [id])
+  teacherId        String   @db.ObjectId
+  
+  @@unique([studentId, weekStartDate])
+}
+
+model Report {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  content     String
+  reportType  String   // WEEKLY, MONTHLY
+  teacherId   String   @db.ObjectId
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+}
+

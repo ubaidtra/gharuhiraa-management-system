@@ -1,0 +1,12 @@
+IMPORTANT: Update your .env file with these settings:
+
+# Database - MongoDB
+DATABASE_URL="mongodb+srv://traubaid:ubaid281986@cluster0.cevggcp.mongodb.net/ubaitech_portio?retryWrites=true&w=majority"
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:8001
+NEXTAUTH_SECRET=cave-of-hiraa-secret-key-change-in-production
+
+# Port Configuration
+PORT=8001
+

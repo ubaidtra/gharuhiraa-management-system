@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Receipt API</title>
+</head>
+<body>
+    <h1>Test Transaction Receipt API</h1>
+    <p>Instructions:</p>
+    <ol>
+        <li>Make sure you're logged in to the app in another tab</li>
+        <li>Get a transaction ID from the Payments page</li>
+        <li>Enter it below and click Test</li>
+    </ol>
+    
+    <input type="text" id="transactionId" placeholder="Enter Transaction ID" style="width: 400px; padding: 10px;">
+    <button onclick="testAPI()" style="padding: 10px 20px;">Test API</button>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+    
+    <script>
+        async function testAPI() {
+            const transactionId = document.getElementById('transactionId').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!transactionId) {
+                resultDiv.innerHTML = '<p style="color: red;">Please enter a transaction ID</p>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                const response = await fetch(`http://localhost:8001/api/transactions/${transactionId}`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>Response Status: ${response.status}</h3>
+                    <h4>Data:</h4>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
+
