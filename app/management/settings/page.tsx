@@ -87,7 +87,7 @@ export default function ManagementSettingsPage() {
           <div className="space-y-3 text-sm">
             <div>
               <span className="text-gray-600">Username:</span>
-              <p className="font-semibold text-gray-900">{session?.user.username}</p>
+              <p className="font-semibold text-gray-900">{session?.user.name}</p>
             </div>
             <div>
               <span className="text-gray-600">Role:</span>

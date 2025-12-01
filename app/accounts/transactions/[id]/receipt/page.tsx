@@ -218,7 +218,7 @@ export default function TransactionReceiptPage() {
 
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <div className="flex justify-between text-xs text-gray-500">
-                  <span>Issued by: {session?.user.username || 'Accounts and Admin'}</span>
+                  <span>Issued by: {session?.user.name || 'Accounts and Admin'}</span>
                   <span>Date printed: {new Date().toLocaleDateString()}</span>
                 </div>
               </div>
