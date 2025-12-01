@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export default function ManagementStudentsPage() {
   const { data: session, status } = useSession();
@@ -84,7 +85,12 @@ export default function ManagementStudentsPage() {
                 {filteredStudents.map((student) => (
                   <tr key={student.id}>
                     <td>
-                      {student.firstName} {student.fatherName} {student.lastName}
+                      <Link
+                        href={`/management/students/${student.id}`}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        {student.firstName} {student.fatherName} {student.lastName}
+                      </Link>
                     </td>
                     <td>{student.gender}</td>
                     <td>{new Date(student.dob).toLocaleDateString()}</td>

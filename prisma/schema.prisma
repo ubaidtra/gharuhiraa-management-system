@@ -117,7 +117,7 @@ model Report {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   content     String
-  reportType  String   // WEEKLY, MONTHLY
+  type        String   // WEEKLY, MONTHLY
   teacherId   String   @db.ObjectId
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())

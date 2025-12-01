@@ -2,10 +2,18 @@ import type { Metadata } from "next";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 import Navbar from "@/components/Navbar";
+import RegisterServiceWorker from "./register-sw";
 
 export const metadata: Metadata = {
   title: "Gharu Hiraa - School Management System",
   description: "School Management System for Gharu Hiraa School for Quranic Memorization",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Gharu Hiraa",
+  },
+  themeColor: "#2563eb",
 };
 
 export default function RootLayout({
@@ -21,6 +29,7 @@ export default function RootLayout({
       </head>
       <body>
         <SessionProvider>
+          <RegisterServiceWorker />
           <Navbar />
           {children}
         </SessionProvider>

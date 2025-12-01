@@ -56,6 +56,9 @@ export default function Navbar() {
                     <Link href="/accounts/withdrawals" className="hover:text-blue-200">
                       Withdrawals
                     </Link>
+                    <Link href="/accounts/user-management" className="hover:text-blue-200">
+                      Users
+                    </Link>
                   </>
                 )}
                 {session.user.role === "TEACHER" && (
@@ -74,25 +77,31 @@ export default function Navbar() {
                     </Link>
                   </>
                 )}
-                {session.user.role === "MANAGEMENT" && (
-                  <>
-                    <Link href="/management" className="hover:text-blue-200">
-                      Dashboard
-                    </Link>
-                    <Link href="/management/students" className="hover:text-blue-200">
-                      Students
-                    </Link>
-                    <Link href="/management/teachers" className="hover:text-blue-200">
-                      Teachers
-                    </Link>
-                    <Link href="/management/reports" className="hover:text-blue-200">
-                      Reports
-                    </Link>
-                    <Link href="/management/statistics" className="hover:text-blue-200">
-                      Statistics
-                    </Link>
-                  </>
-                )}
+                    {session.user.role === "MANAGEMENT" && (
+                      <>
+                        <Link href="/management" className="hover:text-blue-200">
+                          Dashboard
+                        </Link>
+                        <Link href="/management/students" className="hover:text-blue-200">
+                          Students
+                        </Link>
+                        <Link href="/management/teachers" className="hover:text-blue-200">
+                          Teachers
+                        </Link>
+                        <Link href="/management/reports" className="hover:text-blue-200">
+                          Reports
+                        </Link>
+                        <Link href="/management/statistics" className="hover:text-blue-200">
+                          Statistics
+                        </Link>
+                        <Link href="/management/financial-reports" className="hover:text-blue-200">
+                          Financial
+                        </Link>
+                        <Link href="/management/settings" className="hover:text-blue-200">
+                          Settings
+                        </Link>
+                      </>
+                    )}
               </div>
             )}
           </div>

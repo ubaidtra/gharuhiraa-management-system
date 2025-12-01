@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export default function ManagementTeachersPage() {
   const { data: session, status } = useSession();
@@ -85,7 +86,12 @@ export default function ManagementTeachersPage() {
                 {filteredTeachers.map((teacher) => (
                   <tr key={teacher.id}>
                     <td>
-                      {teacher.firstName} {teacher.lastName}
+                      <Link
+                        href={`/management/teachers/${teacher.id}`}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        {teacher.firstName} {teacher.lastName}
+                      </Link>
                     </td>
                     <td>{teacher.gender}</td>
                     <td>{teacher.employmentType.replace(/_/g, " ")}</td>

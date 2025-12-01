@@ -10,6 +10,7 @@ export default function TeachersPage() {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -43,6 +44,78 @@ export default function TeachersPage() {
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
   );
+
+  const handleToggleStatus = async (teacher: any) => {
+    const action = teacher.isActive ? "deactivate" : "activate";
+    if (!confirm(`Are you sure you want to ${action} ${teacher.firstName} ${teacher.lastName}?`)) {
+      return;
+    }
+
+    setActionLoading(teacher.id);
+    try {
+      const res = await fetch(`/api/teachers/${teacher.id}/toggle-status`, {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setTeachers(
+          teachers.map((t) =>
+            t.id === teacher.id ? { ...t, isActive: !t.isActive } : t
+          )
+        );
+        alert(data.message);
+      } else {
+        alert(data.error || `Failed to ${action} teacher`);
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing teacher:`, error);
+      alert(`An error occurred while ${action}ing the teacher`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDelete = async (teacher: any) => {
+    if (
+      !confirm(
+        `⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ${teacher.firstName} ${teacher.lastName}?\n\nThis will delete:\n• Teacher record\n• All learning records created by this teacher\n• All reports submitted\n• Remove from assigned halaqas\n\nThis action CANNOT be undone!`
+      )
+    ) {
+      return;
+    }
+
+    // Double confirmation
+    if (
+      !confirm(
+        `⚠️ FINAL CONFIRMATION\n\nType the teacher's name to confirm deletion:\n${teacher.firstName} ${teacher.lastName}\n\nAre you absolutely sure?`
+      )
+    ) {
+      return;
+    }
+
+    setActionLoading(teacher.id);
+    try {
+      const res = await fetch(`/api/teachers/${teacher.id}/delete`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setTeachers(teachers.filter((t) => t.id !== teacher.id));
+        alert(data.message);
+      } else {
+        alert(data.error || "Failed to delete teacher");
+      }
+    } catch (error) {
+      console.error("Error deleting teacher:", error);
+      alert("An error occurred while deleting the teacher");
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   if (loading || status === "loading") {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
@@ -80,6 +153,7 @@ export default function TeachersPage() {
                   <th>Halaqas</th>
                   <th>Students</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -112,6 +186,32 @@ export default function TeachersPage() {
                       >
                         {teacher.isActive ? "Active" : "Inactive"}
                       </span>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleStatus(teacher)}
+                          disabled={actionLoading === teacher.id}
+                          className={`text-sm px-2 py-1 rounded ${
+                            teacher.isActive
+                              ? "text-orange-600 hover:text-orange-800"
+                              : "text-green-600 hover:text-green-800"
+                          } disabled:opacity-50`}
+                        >
+                          {actionLoading === teacher.id
+                            ? "..."
+                            : teacher.isActive
+                            ? "Deactivate"
+                            : "Activate"}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(teacher)}
+                          disabled={actionLoading === teacher.id}
+                          className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
+                        >
+                          {actionLoading === teacher.id ? "..." : "Delete"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
