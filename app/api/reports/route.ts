@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Validate required fields
-    if (!body.title || !body.content || !body.reportType) {
+    if (!body.title || !body.content || !body.type) {
       return NextResponse.json(
         { error: "Title, content, and report type are required" },
         { status: 400 }
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate report type
-    if (!["WEEKLY", "MONTHLY"].includes(body.reportType)) {
+    if (!["WEEKLY", "MONTHLY"].includes(body.type)) {
       return NextResponse.json(
         { error: "Report type must be WEEKLY or MONTHLY" },
         { status: 400 }
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       data: {
         title: body.title,
         content: body.content,
-        reportType: body.reportType,
+        type: body.type,
         teacherId: session.user.id,
       },
       include: {

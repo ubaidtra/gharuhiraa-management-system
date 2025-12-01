@@ -102,12 +102,12 @@ export default function TeacherReportsPage() {
                         </h3>
                         <span
                           className={`px-2 py-1 text-xs font-semibold rounded ${
-                            report.reportType === "WEEKLY"
+                            report.type === "WEEKLY"
                               ? "bg-blue-100 text-blue-800"
                               : "bg-purple-100 text-purple-800"
                           }`}
                         >
-                          {report.reportType}
+                          {report.type}
                         </span>
                         {report.isRead && (
                           <span className="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
