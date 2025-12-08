@@ -43,14 +43,32 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    
+    // Validate required fields
+    if (!body.type || !body.amount) {
+      return NextResponse.json(
+        { error: "Type and amount are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate amount
+    const amount = parseFloat(body.amount);
+    if (isNaN(amount) || amount <= 0) {
+      return NextResponse.json(
+        { error: "Amount must be a positive number" },
+        { status: 400 }
+      );
+    }
+
     const transaction = await prisma.transaction.create({
       data: {
         type: body.type,
-        amount: parseFloat(body.amount),
+        amount: amount,
         description: body.description,
         date: body.date ? new Date(body.date) : new Date(),
         photoUrl: body.photoUrl,
-        studentId: body.studentId,
+        studentId: body.studentId || null,
       },
     });
 

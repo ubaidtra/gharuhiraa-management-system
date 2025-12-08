@@ -45,21 +45,29 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
+    // Validate required fields
+    if (!body.firstName || !body.fatherName || !body.lastName || !body.dob || !body.address || !body.gender) {
+      return NextResponse.json(
+        { error: "First name, father name, last name, date of birth, address, and gender are required" },
+        { status: 400 }
+      );
+    }
+    
     // Generate unique student ID
     const studentId = await generateStudentId();
     
     const student = await prisma.student.create({
       data: {
         studentId,
-        firstName: body.firstName,
-        fatherName: body.fatherName,
-        lastName: body.lastName,
+        firstName: body.firstName.trim(),
+        fatherName: body.fatherName.trim(),
+        lastName: body.lastName.trim(),
         dob: new Date(body.dob),
-        address: body.address,
+        address: body.address.trim(),
         gender: body.gender,
-        phone: body.phone,
-        guardianPhone: body.guardianPhone,
-        photo: body.photo,
+        phone: body.phone?.trim() || null,
+        guardianPhone: body.guardianPhone?.trim() || null,
+        photo: body.photo || null,
       },
     });
 

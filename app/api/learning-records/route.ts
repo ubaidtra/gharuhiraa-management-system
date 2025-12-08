@@ -44,6 +44,23 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    
+    // Validate required fields
+    if (!body.studentId || !body.teacherId || !body.weekStartDate) {
+      return NextResponse.json(
+        { error: "Student ID, Teacher ID, and Week Start Date are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate teacher matches session
+    if (body.teacherId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Unauthorized - You can only create records for yourself" },
+        { status: 403 }
+      );
+    }
+
     const learningRecord = await prisma.learningRecord.create({
       data: {
         studentId: body.studentId,
