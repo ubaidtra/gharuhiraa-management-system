@@ -33,11 +33,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate file size (max 4MB for Vercel compatibility)
-    const maxSize = 4 * 1024 * 1024; // 4MB (Vercel limit)
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: "File too large. Maximum size is 4MB" },
+        { error: "File too large. Maximum size is 5MB" },
         { status: 400 }
       );
     }
@@ -45,17 +45,11 @@ export async function POST(req: NextRequest) {
     // Create unique filename
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(7);
-    const extension = file.name.split(".").pop() || "jpg";
+    const extension = file.name.split(".").pop();
     const filename = `check_${timestamp}_${randomString}.${extension}`;
 
-    // For Vercel: Use /tmp directory (writable in serverless)
-    // For local dev: Use public/uploads/checks
-    const isVercel = process.env.VERCEL === "1";
-    const uploadDir = isVercel
-      ? path.join("/tmp", "uploads", "checks")
-      : path.join(process.cwd(), "public", "uploads", "checks");
-
     // Ensure upload directory exists
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "checks");
     if (!existsSync(uploadDir)) {
       await mkdir(uploadDir, { recursive: true });
     }
@@ -67,22 +61,17 @@ export async function POST(req: NextRequest) {
     await writeFile(filepath, buffer);
 
     // Return the public URL
-    // Note: On Vercel, files in /tmp are temporary and will be deleted
-    // For production, consider using cloud storage (S3, Cloudinary, etc.)
-    const publicUrl = isVercel 
-      ? `/api/uploaded-file?file=${filename}` // Would need a separate route to serve from /tmp
-      : `/uploads/checks/${filename}`;
+    const publicUrl = `/uploads/checks/${filename}`;
 
     return NextResponse.json({
       success: true,
       url: publicUrl,
       filename: filename,
-      warning: isVercel ? "File uploaded to temporary storage. Consider using cloud storage for production." : undefined,
     });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(
-      { error: "Failed to upload file. Please try again or use a smaller file." },
+      { error: "Failed to upload file" },
       { status: 500 }
     );
   }

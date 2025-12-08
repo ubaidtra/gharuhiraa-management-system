@@ -41,7 +41,7 @@ export default function ManagementReportsPage() {
   const filteredReports = reports.filter((report) => {
     if (filter === "ALL") return true;
     if (filter === "UNREAD") return !report.isRead;
-    return report.type === filter;
+    return report.reportType === filter;
   });
 
   const unreadCount = reports.filter((r) => !r.isRead).length;
@@ -158,12 +158,12 @@ export default function ManagementReportsPage() {
                         </h3>
                         <span
                           className={`px-2 py-1 text-xs font-semibold rounded ${
-                            report.type === "WEEKLY"
+                            report.reportType === "WEEKLY"
                               ? "bg-blue-100 text-blue-800"
                               : "bg-purple-100 text-purple-800"
                           }`}
                         >
-                          {report.type}
+                          {report.reportType}
                         </span>
                         {!report.isRead && (
                           <span className="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800">

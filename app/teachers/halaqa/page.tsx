@@ -84,7 +84,7 @@ export default function HalaqaPage() {
 
         {halaqas.length === 0 && (
           <div className="card text-center">
-            <p className="text-gray-500 mb-4">You have not been assigned to any halaqas yet.</p>
+            <p className="text-gray-500 mb-4">You haven't been assigned to any halaqas yet.</p>
             <p className="text-sm text-gray-600">
               Please contact the Accounts and Admin department to be assigned to a Halaqa.
             </p>

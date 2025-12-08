@@ -70,12 +70,12 @@ export default function ViewReportPageManagement() {
               <div className="flex items-center gap-3">
                 <span
                   className={`px-3 py-1 text-sm font-semibold rounded ${
-                    report.type === "WEEKLY"
+                    report.reportType === "WEEKLY"
                       ? "bg-blue-100 text-blue-800"
                       : "bg-purple-100 text-purple-800"
                   }`}
                 >
-                  {report.type} REPORT
+                  {report.reportType} REPORT
                 </span>
                 {report.isRead && (
                   <span className="px-3 py-1 text-sm font-semibold rounded bg-green-100 text-green-800">
@@ -100,7 +100,7 @@ export default function ViewReportPageManagement() {
               <div>
                 <p className="text-gray-600">Report Type:</p>
                 <p className="font-semibold text-gray-900">
-                  {report.type} Report
+                  {report.reportType} Report
                 </p>
               </div>
               <div>

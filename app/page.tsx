@@ -10,14 +10,15 @@ export default async function Home() {
   }
 
   // Redirect based on role
-  if (session.user.role === "ACCOUNTS") {
-    redirect("/accounts");
-  } else if (session.user.role === "TEACHER") {
-    redirect("/teachers");
-  } else if (session.user.role === "MANAGEMENT") {
-    redirect("/management");
-  } else {
-    redirect("/login");
+  switch (session.user.role) {
+    case "ACCOUNTS":
+      redirect("/accounts");
+    case "TEACHER":
+      redirect("/teachers");
+    case "MANAGEMENT":
+      redirect("/management");
+    default:
+      redirect("/login");
   }
 }
 
