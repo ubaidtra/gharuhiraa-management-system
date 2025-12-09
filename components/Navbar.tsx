@@ -59,6 +59,9 @@ export default function Navbar() {
                     <Link href="/accounts/user-management" className="hover:text-blue-200">
                       Users
                     </Link>
+                    <Link href="/accounts/settings" className="hover:text-blue-200">
+                      Settings
+                    </Link>
                   </>
                 )}
                 {session.user.role === "TEACHER" && (
