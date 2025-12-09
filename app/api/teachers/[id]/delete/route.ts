@@ -37,10 +37,9 @@ export async function DELETE(
       where: { teacherId: params.id },
     });
 
-    // Remove teacher from halaqas (set teacherId to null)
-    await prisma.halaqa.updateMany({
+    // Delete associated halaqas (teacherId is required, cannot be null)
+    await prisma.halaqa.deleteMany({
       where: { teacherId: params.id },
-      data: { teacherId: null },
     });
 
     // Delete the teacher
