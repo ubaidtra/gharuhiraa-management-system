@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // GET - View single report
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,8 +14,9 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const report = await prisma.report.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         teacher: {
           select: {
@@ -48,7 +49,7 @@ export async function GET(
     // Mark as read if Director is viewing
     if (session.user.role === "MANAGEMENT" && !report.isRead) {
       await prisma.report.update({
-        where: { id: params.id },
+        where: { id },
         data: { isRead: true },
       });
     }
@@ -66,7 +67,7 @@ export async function GET(
 // DELETE - Delete report (Teachers can delete their own)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -77,8 +78,9 @@ export async function DELETE(
       );
     }
 
+    const { id } = await params;
     const report = await prisma.report.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!report) {
@@ -94,7 +96,7 @@ export async function DELETE(
     }
 
     await prisma.report.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Report deleted successfully" });

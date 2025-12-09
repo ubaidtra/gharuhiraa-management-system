@@ -4,11 +4,20 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { redirect } from "next/navigation";
+import LoadingPage from "@/components/LoadingPage";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import FormField from "@/components/FormField";
+import FormSelect from "@/components/FormSelect";
+import FormTextarea from "@/components/FormTextarea";
+import { useToast } from "@/components/Toast";
+import { GENDERS, GENDER_LABELS, EMPLOYMENT_TYPES, EMPLOYMENT_TYPE_LABELS } from "@/lib/constants";
 
 export default function NewTeacherPage() {
   const { data: session, status } = useSession();
+  const { showToast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -41,13 +50,15 @@ export default function NewTeacherPage() {
       });
 
       if (res.ok) {
+        showToast("success", "Teacher added successfully");
         router.push("/accounts/teachers");
       } else {
-        alert("Failed to create teacher");
+        const data = await res.json();
+        showToast("error", data.error || "Failed to create teacher");
       }
     } catch (error) {
       console.error("Error creating teacher:", error);
-      alert("An error occurred");
+      showToast("error", "An error occurred while creating the teacher");
     } finally {
       setLoading(false);
     }
@@ -63,7 +74,7 @@ export default function NewTeacherPage() {
   };
 
   if (status === "loading") {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return <LoadingPage message="Loading form..." />;
   }
 
   return (
@@ -74,100 +85,80 @@ export default function NewTeacherPage() {
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name *
-                </label>
+              <FormField label="First Name" name="firstName" required error={errors.firstName}>
                 <input
                   type="text"
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleChange}
-                  className="input-field"
+                  className={`input-field ${errors.firstName ? "border-red-500" : ""}`}
                   required
+                  disabled={loading}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name *
-                </label>
+              </FormField>
+              <FormField label="Last Name" name="lastName" required error={errors.lastName}>
                 <input
                   type="text"
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleChange}
-                  className="input-field"
+                  className={`input-field ${errors.lastName ? "border-red-500" : ""}`}
                   required
+                  disabled={loading}
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Gender *
-                </label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  className="input-field"
-                  required
-                >
-                  <option value="MALE">Male</option>
-                  <option value="FEMALE">Female</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date of Birth *
-                </label>
+              <FormSelect
+                label="Gender"
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                required
+                options={Object.entries(GENDERS).map(([key, value]) => ({
+                  value,
+                  label: GENDER_LABELS[value] || value,
+                }))}
+              />
+              <FormField label="Date of Birth" name="dob" required error={errors.dob}>
                 <input
                   type="date"
                   name="dob"
                   value={formData.dob}
                   onChange={handleChange}
-                  className="input-field"
+                  className={`input-field ${errors.dob ? "border-red-500" : ""}`}
                   required
+                  disabled={loading}
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Employment Type *
-                </label>
-                <select
-                  name="employmentType"
-                  value={formData.employmentType}
-                  onChange={handleChange}
-                  className="input-field"
-                  required
-                >
-                  <option value="FULL_TIME">Full Time</option>
-                  <option value="PART_TIME">Part Time</option>
-                  <option value="VOLUNTEER">Volunteer</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone
-                </label>
+              <FormSelect
+                label="Employment Type"
+                name="employmentType"
+                value={formData.employmentType}
+                onChange={handleChange}
+                required
+                options={Object.entries(EMPLOYMENT_TYPES).map(([key, value]) => ({
+                  value,
+                  label: EMPLOYMENT_TYPE_LABELS[value] || value,
+                }))}
+              />
+              <FormField label="Phone" name="phone" error={errors.phone}>
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="input-field"
+                  className={`input-field ${errors.phone ? "border-red-500" : ""}`}
+                  disabled={loading}
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Certificate/Qualification
-              </label>
+            <FormField label="Certificate/Qualification" name="certificate" hint="e.g., Ijazah in Hafs">
               <input
                 type="text"
                 name="certificate"
@@ -175,30 +166,34 @@ export default function NewTeacherPage() {
                 onChange={handleChange}
                 className="input-field"
                 placeholder="e.g., Ijazah in Hafs"
+                disabled={loading}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Address *
-              </label>
-              <textarea
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                className="input-field"
-                rows={3}
-                required
-              />
-            </div>
+            <FormTextarea
+              label="Address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              required
+              rows={3}
+              error={errors.address}
+            />
 
             <div className="flex space-x-4">
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary disabled:opacity-50"
+                className="btn-primary flex items-center justify-center"
               >
-                {loading ? "Saving..." : "Add Teacher"}
+                {loading ? (
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  "Add Teacher"
+                )}
               </button>
               <button
                 type="button"

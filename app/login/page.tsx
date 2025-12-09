@@ -1,16 +1,22 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import LoadingPage from "@/components/LoadingPage";
+import ErrorMessage from "@/components/ErrorMessage";
+import FormField from "@/components/FormField";
 
-export default function LoginPage() {
+function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/accounts";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,8 +32,8 @@ export default function LoginPage() {
 
       if (result?.error) {
         setError("Invalid username or password");
-      } else {
-        router.push("/");
+      } else if (result?.ok) {
+        router.push(callbackUrl);
         router.refresh();
       }
     } catch (err) {
@@ -53,10 +59,7 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-              Username
-            </label>
+          <FormField label="Username" name="username" required>
             <input
               id="username"
               type="text"
@@ -65,13 +68,11 @@ export default function LoginPage() {
               className="input-field"
               placeholder="Enter your username"
               required
+              disabled={loading}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
+          <FormField label="Password" name="password" required>
             <input
               id="password"
               type="password"
@@ -80,25 +81,37 @@ export default function LoginPage() {
               className="input-field"
               placeholder="Enter your password"
               required
+              disabled={loading}
             />
-          </div>
+          </FormField>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
+          {error && <ErrorMessage message={error} className="mb-4" />}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full btn-primary flex items-center justify-center"
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? (
+              <>
+                <LoadingSpinner size="sm" className="mr-2" />
+                Signing in...
+              </>
+            ) : (
+              "Sign In"
+            )}
           </button>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoadingPage message="Loading login form..." />}>
+      <LoginForm />
+    </Suspense>
   );
 }
 

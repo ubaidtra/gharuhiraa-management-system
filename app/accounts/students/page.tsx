@@ -4,13 +4,28 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import LoadingPage from "@/components/LoadingPage";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import EmptyState from "@/components/EmptyState";
+import { useToast } from "@/components/Toast";
+import { Student } from "@/types/student";
 
 export default function StudentsPage() {
   const { data: session, status } = useSession();
-  const [students, setStudents] = useState<any[]>([]);
+  const { showToast } = useToast();
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; student: Student | null }>({
+    isOpen: false,
+    student: null,
+  });
+  const [toggleDialog, setToggleDialog] = useState<{ isOpen: boolean; student: Student | null }>({
+    isOpen: false,
+    student: null,
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -45,13 +60,13 @@ export default function StudentsPage() {
       .includes(searchTerm.toLowerCase())
   );
 
-  const handleToggleStatus = async (student: any) => {
+  const handleToggleStatus = async () => {
+    if (!toggleDialog.student) return;
+    const student = toggleDialog.student;
     const action = student.isActive ? "deactivate" : "activate";
-    if (!confirm(`Are you sure you want to ${action} ${student.firstName} ${student.lastName}?`)) {
-      return;
-    }
 
     setActionLoading(student.id);
+    setToggleDialog({ isOpen: false, student: null });
     try {
       const res = await fetch(`/api/students/${student.id}/toggle-status`, {
         method: "POST",
@@ -65,37 +80,24 @@ export default function StudentsPage() {
             s.id === student.id ? { ...s, isActive: !s.isActive } : s
           )
         );
-        alert(data.message);
+        showToast("success", data.message);
       } else {
-        alert(data.error || `Failed to ${action} student`);
+        showToast("error", data.error || `Failed to ${action} student`);
       }
     } catch (error) {
       console.error(`Error ${action}ing student:`, error);
-      alert(`An error occurred while ${action}ing the student`);
+      showToast("error", `An error occurred while ${action}ing the student`);
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleDelete = async (student: any) => {
-    if (
-      !confirm(
-        `⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ${student.firstName} ${student.lastName}?\n\nThis will delete:\n• Student record\n• All payment history\n• All learning records\n\nThis action CANNOT be undone!`
-      )
-    ) {
-      return;
-    }
-
-    // Double confirmation
-    if (
-      !confirm(
-        `⚠️ FINAL CONFIRMATION\n\nType the student's name to confirm deletion:\n${student.firstName} ${student.lastName}\n\nAre you absolutely sure?`
-      )
-    ) {
-      return;
-    }
+  const handleDelete = async () => {
+    if (!deleteDialog.student) return;
+    const student = deleteDialog.student;
 
     setActionLoading(student.id);
+    setDeleteDialog({ isOpen: false, student: null });
     try {
       const res = await fetch(`/api/students/${student.id}/delete`, {
         method: "DELETE",
@@ -105,20 +107,20 @@ export default function StudentsPage() {
 
       if (res.ok) {
         setStudents(students.filter((s) => s.id !== student.id));
-        alert(data.message);
+        showToast("success", data.message);
       } else {
-        alert(data.error || "Failed to delete student");
+        showToast("error", data.error || "Failed to delete student");
       }
     } catch (error) {
       console.error("Error deleting student:", error);
-      alert("An error occurred while deleting the student");
+      showToast("error", "An error occurred while deleting the student");
     } finally {
       setActionLoading(null);
     }
   };
 
   if (loading || status === "loading") {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return <LoadingPage message="Loading students..." />;
   }
 
   return (
@@ -189,26 +191,38 @@ export default function StudentsPage() {
                           View
                         </Link>
                         <button
-                          onClick={() => handleToggleStatus(student)}
+                          onClick={() => setToggleDialog({ isOpen: true, student })}
                           disabled={actionLoading === student.id}
                           className={`text-sm px-2 py-1 rounded ${
                             student.isActive
                               ? "text-orange-600 hover:text-orange-800"
                               : "text-green-600 hover:text-green-800"
-                          } disabled:opacity-50`}
+                          } disabled:opacity-50 flex items-center gap-1`}
                         >
-                          {actionLoading === student.id
-                            ? "..."
-                            : student.isActive
-                            ? "Deactivate"
-                            : "Activate"}
+                          {actionLoading === student.id ? (
+                            <>
+                              <LoadingSpinner size="sm" />
+                              Processing...
+                            </>
+                          ) : student.isActive ? (
+                            "Deactivate"
+                          ) : (
+                            "Activate"
+                          )}
                         </button>
                         <button
-                          onClick={() => handleDelete(student)}
+                          onClick={() => setDeleteDialog({ isOpen: true, student })}
                           disabled={actionLoading === student.id}
-                          className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
+                          className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50 flex items-center gap-1"
                         >
-                          {actionLoading === student.id ? "..." : "Delete"}
+                          {actionLoading === student.id ? (
+                            <>
+                              <LoadingSpinner size="sm" />
+                              Deleting...
+                            </>
+                          ) : (
+                            "Delete"
+                          )}
                         </button>
                       </div>
                     </td>
@@ -217,7 +231,35 @@ export default function StudentsPage() {
               </tbody>
             </table>
           </div>
+          {filteredStudents.length === 0 && (
+            <EmptyState
+              title="No students found"
+              message={searchTerm ? `No students match "${searchTerm}"` : "Get started by registering your first student"}
+              actionLabel={searchTerm ? undefined : "Register New Student"}
+              onAction={searchTerm ? undefined : () => window.location.href = "/accounts/students/new"}
+            />
+          )}
         </div>
+
+        <ConfirmDialog
+          isOpen={toggleDialog.isOpen}
+          title={`${toggleDialog.student?.isActive ? "Deactivate" : "Activate"} Student`}
+          message={`Are you sure you want to ${toggleDialog.student?.isActive ? "deactivate" : "activate"} ${toggleDialog.student?.firstName} ${toggleDialog.student?.lastName}?`}
+          confirmText={toggleDialog.student?.isActive ? "Deactivate" : "Activate"}
+          variant={toggleDialog.student?.isActive ? "warning" : "info"}
+          onConfirm={handleToggleStatus}
+          onCancel={() => setToggleDialog({ isOpen: false, student: null })}
+        />
+
+        <ConfirmDialog
+          isOpen={deleteDialog.isOpen}
+          title="Delete Student"
+          message={`⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ${deleteDialog.student?.firstName} ${deleteDialog.student?.lastName}?\n\nThis will delete:\n• Student record\n• All payment history\n• All learning records\n\nThis action CANNOT be undone!`}
+          confirmText="Delete"
+          variant="danger"
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteDialog({ isOpen: false, student: null })}
+        />
       </div>
     </div>
   );

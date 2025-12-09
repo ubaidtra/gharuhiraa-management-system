@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,8 +15,9 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const { id } = await params;
     const student = await prisma.student.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!student) {
@@ -25,7 +26,7 @@ export async function POST(
 
     // Toggle the isActive status
     const updatedStudent = await prisma.student.update({
-      where: { id: params.id },
+      where: { id },
       data: { isActive: !student.isActive },
     });
 

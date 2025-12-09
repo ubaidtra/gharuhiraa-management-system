@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,8 +13,9 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const halaqa = await prisma.halaqa.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         teacher: true,
         students: true,
@@ -37,7 +38,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -45,12 +46,13 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
 
     // If user is ACCOUNTS, allow full update including teacher assignment
     if (session.user.role === "ACCOUNTS") {
       const halaqa = await prisma.halaqa.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           name: body.name,
           studentLevel: body.studentLevel,
@@ -65,7 +67,7 @@ export async function PUT(
     if (session.user.role === "TEACHER") {
       // First, check if this halaqa is assigned to this teacher
       const existingHalaqa = await prisma.halaqa.findUnique({
-        where: { id: params.id },
+        where: { id },
       });
 
       if (!existingHalaqa) {
@@ -81,7 +83,7 @@ export async function PUT(
 
       // Teachers can only update name and studentLevel, not teacherId
       const halaqa = await prisma.halaqa.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           name: body.name,
           studentLevel: body.studentLevel,
@@ -102,7 +104,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -110,8 +112,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized - Only Accounts and Admin can delete Halaqas" }, { status: 403 });
     }
 
+    const { id } = await params;
     await prisma.halaqa.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Halaqa deleted successfully" });

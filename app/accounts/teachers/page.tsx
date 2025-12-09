@@ -4,13 +4,28 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import LoadingPage from "@/components/LoadingPage";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import EmptyState from "@/components/EmptyState";
+import { useToast } from "@/components/Toast";
+import { Teacher } from "@/types/teacher";
 
 export default function TeachersPage() {
   const { data: session, status } = useSession();
-  const [teachers, setTeachers] = useState<any[]>([]);
+  const { showToast } = useToast();
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; teacher: Teacher | null }>({
+    isOpen: false,
+    teacher: null,
+  });
+  const [toggleDialog, setToggleDialog] = useState<{ isOpen: boolean; teacher: Teacher | null }>({
+    isOpen: false,
+    teacher: null,
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -45,13 +60,13 @@ export default function TeachersPage() {
       .includes(searchTerm.toLowerCase())
   );
 
-  const handleToggleStatus = async (teacher: any) => {
+  const handleToggleStatus = async () => {
+    if (!toggleDialog.teacher) return;
+    const teacher = toggleDialog.teacher;
     const action = teacher.isActive ? "deactivate" : "activate";
-    if (!confirm(`Are you sure you want to ${action} ${teacher.firstName} ${teacher.lastName}?`)) {
-      return;
-    }
 
     setActionLoading(teacher.id);
+    setToggleDialog({ isOpen: false, teacher: null });
     try {
       const res = await fetch(`/api/teachers/${teacher.id}/toggle-status`, {
         method: "POST",
@@ -65,37 +80,24 @@ export default function TeachersPage() {
             t.id === teacher.id ? { ...t, isActive: !t.isActive } : t
           )
         );
-        alert(data.message);
+        showToast("success", data.message);
       } else {
-        alert(data.error || `Failed to ${action} teacher`);
+        showToast("error", data.error || `Failed to ${action} teacher`);
       }
     } catch (error) {
       console.error(`Error ${action}ing teacher:`, error);
-      alert(`An error occurred while ${action}ing the teacher`);
+      showToast("error", `An error occurred while ${action}ing the teacher`);
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleDelete = async (teacher: any) => {
-    if (
-      !confirm(
-        `⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ${teacher.firstName} ${teacher.lastName}?\n\nThis will delete:\n• Teacher record\n• All learning records created by this teacher\n• All reports submitted\n• Remove from assigned halaqas\n\nThis action CANNOT be undone!`
-      )
-    ) {
-      return;
-    }
-
-    // Double confirmation
-    if (
-      !confirm(
-        `⚠️ FINAL CONFIRMATION\n\nType the teacher's name to confirm deletion:\n${teacher.firstName} ${teacher.lastName}\n\nAre you absolutely sure?`
-      )
-    ) {
-      return;
-    }
+  const handleDelete = async () => {
+    if (!deleteDialog.teacher) return;
+    const teacher = deleteDialog.teacher;
 
     setActionLoading(teacher.id);
+    setDeleteDialog({ isOpen: false, teacher: null });
     try {
       const res = await fetch(`/api/teachers/${teacher.id}/delete`, {
         method: "DELETE",
@@ -105,20 +107,20 @@ export default function TeachersPage() {
 
       if (res.ok) {
         setTeachers(teachers.filter((t) => t.id !== teacher.id));
-        alert(data.message);
+        showToast("success", data.message);
       } else {
-        alert(data.error || "Failed to delete teacher");
+        showToast("error", data.error || "Failed to delete teacher");
       }
     } catch (error) {
       console.error("Error deleting teacher:", error);
-      alert("An error occurred while deleting the teacher");
+      showToast("error", "An error occurred while deleting the teacher");
     } finally {
       setActionLoading(null);
     }
   };
 
   if (loading || status === "loading") {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return <LoadingPage message="Loading teachers..." />;
   }
 
   return (
@@ -169,12 +171,12 @@ export default function TeachersPage() {
                     </td>
                     <td>{teacher.gender}</td>
                     <td>{teacher.employmentType.replace(/_/g, " ")}</td>
-                    <td>{teacher.halaqas.length}</td>
+                    <td>{teacher.halaqas?.length || 0}</td>
                     <td>
-                      {teacher.halaqas.reduce(
+                      {teacher.halaqas?.reduce(
                         (sum: number, h: any) => sum + h.students.length,
                         0
-                      )}
+                      ) || 0}
                     </td>
                     <td>
                       <span
@@ -190,26 +192,38 @@ export default function TeachersPage() {
                     <td>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleToggleStatus(teacher)}
+                          onClick={() => setToggleDialog({ isOpen: true, teacher })}
                           disabled={actionLoading === teacher.id}
                           className={`text-sm px-2 py-1 rounded ${
                             teacher.isActive
                               ? "text-orange-600 hover:text-orange-800"
                               : "text-green-600 hover:text-green-800"
-                          } disabled:opacity-50`}
+                          } disabled:opacity-50 flex items-center gap-1`}
                         >
-                          {actionLoading === teacher.id
-                            ? "..."
-                            : teacher.isActive
-                            ? "Deactivate"
-                            : "Activate"}
+                          {actionLoading === teacher.id ? (
+                            <>
+                              <LoadingSpinner size="sm" />
+                              Processing...
+                            </>
+                          ) : teacher.isActive ? (
+                            "Deactivate"
+                          ) : (
+                            "Activate"
+                          )}
                         </button>
                         <button
-                          onClick={() => handleDelete(teacher)}
+                          onClick={() => setDeleteDialog({ isOpen: true, teacher })}
                           disabled={actionLoading === teacher.id}
-                          className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
+                          className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50 flex items-center gap-1"
                         >
-                          {actionLoading === teacher.id ? "..." : "Delete"}
+                          {actionLoading === teacher.id ? (
+                            <>
+                              <LoadingSpinner size="sm" />
+                              Deleting...
+                            </>
+                          ) : (
+                            "Delete"
+                          )}
                         </button>
                       </div>
                     </td>
@@ -219,11 +233,34 @@ export default function TeachersPage() {
             </table>
           </div>
           {filteredTeachers.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No teachers found.</p>
-            </div>
+            <EmptyState
+              title="No teachers found"
+              message={searchTerm ? `No teachers match "${searchTerm}"` : "Get started by adding your first teacher"}
+              actionLabel={searchTerm ? undefined : "Add New Teacher"}
+              onAction={searchTerm ? undefined : () => window.location.href = "/accounts/teachers/new"}
+            />
           )}
         </div>
+
+        <ConfirmDialog
+          isOpen={toggleDialog.isOpen}
+          title={`${toggleDialog.teacher?.isActive ? "Deactivate" : "Activate"} Teacher`}
+          message={`Are you sure you want to ${toggleDialog.teacher?.isActive ? "deactivate" : "activate"} ${toggleDialog.teacher?.firstName} ${toggleDialog.teacher?.lastName}?`}
+          confirmText={toggleDialog.teacher?.isActive ? "Deactivate" : "Activate"}
+          variant={toggleDialog.teacher?.isActive ? "warning" : "info"}
+          onConfirm={handleToggleStatus}
+          onCancel={() => setToggleDialog({ isOpen: false, teacher: null })}
+        />
+
+        <ConfirmDialog
+          isOpen={deleteDialog.isOpen}
+          title="Delete Teacher"
+          message={`⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ${deleteDialog.teacher?.firstName} ${deleteDialog.teacher?.lastName}?\n\nThis will delete:\n• Teacher record\n• All learning records created by this teacher\n• All reports submitted\n• Remove from assigned halaqas\n\nThis action CANNOT be undone!`}
+          confirmText="Delete"
+          variant="danger"
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteDialog({ isOpen: false, teacher: null })}
+        />
       </div>
     </div>
   );

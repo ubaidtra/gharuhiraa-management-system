@@ -5,18 +5,18 @@ import { prisma } from "@/lib/prisma";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Only ACCOUNTS can delete students
-    if (!session || session.user.role !== "ACCOUNTS") {
+    if (!session || (session.user.role !== "ACCOUNTS" && session.user.role !== "MANAGEMENT")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const { id } = await params;
     const student = await prisma.student.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         firstName: true,
         lastName: true,
@@ -30,16 +30,16 @@ export async function DELETE(
 
     // Delete related records first (cascade delete)
     await prisma.learningRecord.deleteMany({
-      where: { studentId: params.id },
+      where: { studentId: id },
     });
 
     await prisma.transaction.deleteMany({
-      where: { studentId: params.id },
+      where: { studentId: id },
     });
 
     // Delete the student
     await prisma.student.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({

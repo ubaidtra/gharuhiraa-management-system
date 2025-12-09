@@ -4,14 +4,19 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import LoadingPage from "@/components/LoadingPage";
+import StatCard from "@/components/StatCard";
+import EmptyState from "@/components/EmptyState";
+import { formatCurrency } from "@/lib/utils/format";
+import { Transaction } from "@/types/transaction";
 
 export default function AccountsDashboard() {
   const { data: session, status } = useSession();
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalTeachers: 0,
-    recentPayments: [] as any[],
-    recentWithdrawals: [] as any[],
+    recentPayments: [] as Transaction[],
+    recentWithdrawals: [] as Transaction[],
     totalRevenue: 0,
     totalWithdrawals: 0,
   });
@@ -39,16 +44,16 @@ export default function AccountsDashboard() {
         const teachers = await teachersRes.json();
         const transactions = await transactionsRes.json();
 
-        const payments = transactions.filter((t: any) => t.type !== "WITHDRAWAL");
-        const withdrawals = transactions.filter((t: any) => t.type === "WITHDRAWAL");
+        const payments = transactions.filter((t: Transaction) => t.type !== "WITHDRAWAL");
+        const withdrawals = transactions.filter((t: Transaction) => t.type === "WITHDRAWAL");
 
         setStats({
           totalStudents: students.length,
           totalTeachers: teachers.length,
           recentPayments: payments.slice(0, 3),
           recentWithdrawals: withdrawals.slice(0, 3),
-          totalRevenue: payments.reduce((sum: number, t: any) => sum + t.amount, 0),
-          totalWithdrawals: withdrawals.reduce((sum: number, t: any) => sum + t.amount, 0),
+          totalRevenue: payments.reduce((sum: number, t: Transaction) => sum + t.amount, 0),
+          totalWithdrawals: withdrawals.reduce((sum: number, t: Transaction) => sum + t.amount, 0),
         });
       } catch (error) {
         console.error("Error fetching stats:", error);
@@ -63,7 +68,7 @@ export default function AccountsDashboard() {
   }, [session]);
 
   if (loading || status === "loading") {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return <LoadingPage message="Loading dashboard..." />;
   }
 
   return (
@@ -72,22 +77,46 @@ export default function AccountsDashboard() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Accounts and Admin Dashboard</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Total Students</h3>
-            <p className="text-4xl font-bold text-blue-600">{stats.totalStudents}</p>
-          </div>
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Total Teachers</h3>
-            <p className="text-4xl font-bold text-green-600">{stats.totalTeachers}</p>
-          </div>
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Total Revenue</h3>
-            <p className="text-4xl font-bold text-green-600">D{stats.totalRevenue.toFixed(0)}</p>
-          </div>
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Total Expenses</h3>
-            <p className="text-4xl font-bold text-red-600">D{stats.totalWithdrawals.toFixed(0)}</p>
-          </div>
+          <StatCard
+            title="Total Students"
+            value={stats.totalStudents}
+            color="blue"
+            icon={
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            }
+          />
+          <StatCard
+            title="Total Teachers"
+            value={stats.totalTeachers}
+            color="green"
+            icon={
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            }
+          />
+          <StatCard
+            title="Total Revenue"
+            value={formatCurrency(stats.totalRevenue)}
+            color="green"
+            icon={
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
+          />
+          <StatCard
+            title="Total Expenses"
+            value={formatCurrency(stats.totalWithdrawals)}
+            color="red"
+            icon={
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            }
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -146,7 +175,12 @@ export default function AccountsDashboard() {
               </Link>
             </div>
             {stats.recentPayments.length === 0 ? (
-              <p className="text-gray-500">No payments yet</p>
+              <EmptyState
+                title="No payments yet"
+                message="Record your first payment to see it here"
+                actionLabel="Record Payment"
+                onAction={() => window.location.href = "/accounts/transactions/new"}
+              />
             ) : (
               <div className="space-y-2">
                 {stats.recentPayments.map((payment) => (
@@ -174,7 +208,12 @@ export default function AccountsDashboard() {
               </Link>
             </div>
             {stats.recentWithdrawals.length === 0 ? (
-              <p className="text-gray-500">No withdrawals yet</p>
+              <EmptyState
+                title="No withdrawals yet"
+                message="Record your first withdrawal to see it here"
+                actionLabel="Record Withdrawal"
+                onAction={() => window.location.href = "/accounts/withdrawals/new"}
+              />
             ) : (
               <div className="space-y-2">
                 {stats.recentWithdrawals.map((withdrawal) => (

@@ -4,11 +4,20 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { redirect } from "next/navigation";
+import LoadingPage from "@/components/LoadingPage";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import FormField from "@/components/FormField";
+import FormSelect from "@/components/FormSelect";
+import FormTextarea from "@/components/FormTextarea";
+import { useToast } from "@/components/Toast";
+import { GENDERS, GENDER_LABELS } from "@/lib/constants";
 
 export default function NewStudentPage() {
   const { data: session, status } = useSession();
+  const { showToast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     firstName: "",
     fatherName: "",
@@ -41,13 +50,15 @@ export default function NewStudentPage() {
       });
 
       if (res.ok) {
+        showToast("success", "Student registered successfully");
         router.push("/accounts/students");
       } else {
-        alert("Failed to create student");
+        const data = await res.json();
+        showToast("error", data.error || "Failed to create student");
       }
     } catch (error) {
       console.error("Error creating student:", error);
-      alert("An error occurred");
+      showToast("error", "An error occurred while creating the student");
     } finally {
       setLoading(false);
     }
@@ -63,7 +74,7 @@ export default function NewStudentPage() {
   };
 
   if (status === "loading") {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return <LoadingPage message="Loading form..." />;
   }
 
   return (
@@ -74,126 +85,113 @@ export default function NewStudentPage() {
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name *
-                </label>
+              <FormField label="First Name" name="firstName" required error={errors.firstName}>
                 <input
                   type="text"
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleChange}
-                  className="input-field"
+                  className={`input-field ${errors.firstName ? "border-red-500" : ""}`}
                   required
+                  disabled={loading}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Father Name *
-                </label>
+              </FormField>
+              <FormField label="Father Name" name="fatherName" required error={errors.fatherName}>
                 <input
                   type="text"
                   name="fatherName"
                   value={formData.fatherName}
                   onChange={handleChange}
-                  className="input-field"
+                  className={`input-field ${errors.fatherName ? "border-red-500" : ""}`}
                   required
+                  disabled={loading}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name *
-                </label>
+              </FormField>
+              <FormField label="Last Name" name="lastName" required error={errors.lastName}>
                 <input
                   type="text"
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleChange}
-                  className="input-field"
+                  className={`input-field ${errors.lastName ? "border-red-500" : ""}`}
                   required
+                  disabled={loading}
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date of Birth *
-                </label>
+              <FormField label="Date of Birth" name="dob" required error={errors.dob}>
                 <input
                   type="date"
                   name="dob"
                   value={formData.dob}
                   onChange={handleChange}
-                  className="input-field"
+                  className={`input-field ${errors.dob ? "border-red-500" : ""}`}
                   required
+                  disabled={loading}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Gender *
-                </label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  className="input-field"
-                  required
-                >
-                  <option value="MALE">Male</option>
-                  <option value="FEMALE">Female</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Address *
-              </label>
-              <textarea
-                name="address"
-                value={formData.address}
+              </FormField>
+              <FormSelect
+                label="Gender"
+                name="gender"
+                value={formData.gender}
                 onChange={handleChange}
-                className="input-field"
-                rows={3}
                 required
+                options={Object.entries(GENDERS).map(([key, value]) => ({
+                  value,
+                  label: GENDER_LABELS[value] || value,
+                }))}
               />
             </div>
 
+            <FormTextarea
+              label="Address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              required
+              rows={3}
+              error={errors.address}
+            />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Student Phone
-                </label>
+              <FormField label="Student Phone" name="phone" error={errors.phone}>
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="input-field"
+                  className={`input-field ${errors.phone ? "border-red-500" : ""}`}
+                  disabled={loading}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Guardian Phone
-                </label>
+              </FormField>
+              <FormField label="Guardian Phone" name="guardianPhone" error={errors.guardianPhone}>
                 <input
                   type="tel"
                   name="guardianPhone"
                   value={formData.guardianPhone}
                   onChange={handleChange}
-                  className="input-field"
+                  className={`input-field ${errors.guardianPhone ? "border-red-500" : ""}`}
+                  disabled={loading}
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="flex space-x-4">
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary disabled:opacity-50"
+                className="btn-primary flex items-center justify-center"
               >
-                {loading ? "Saving..." : "Register Student"}
+                {loading ? (
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  "Register Student"
+                )}
               </button>
               <button
                 type="button"

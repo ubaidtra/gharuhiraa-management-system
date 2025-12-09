@@ -4,12 +4,24 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import LoadingPage from "@/components/LoadingPage";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import EmptyState from "@/components/EmptyState";
+import { useToast } from "@/components/Toast";
+import { Teacher } from "@/types/teacher";
 
 export default function ManagementTeachersPage() {
   const { data: session, status } = useSession();
-  const [teachers, setTeachers] = useState<any[]>([]);
+  const { showToast } = useToast();
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; teacher: Teacher | null }>({
+    isOpen: false,
+    teacher: null,
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -44,18 +56,42 @@ export default function ManagementTeachersPage() {
       .includes(searchTerm.toLowerCase())
   );
 
+  const handleDelete = async () => {
+    if (!deleteDialog.teacher) return;
+    const teacher = deleteDialog.teacher;
+
+    setActionLoading(teacher.id);
+    setDeleteDialog({ isOpen: false, teacher: null });
+    try {
+      const res = await fetch(`/api/teachers/${teacher.id}/delete`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setTeachers(teachers.filter((t) => t.id !== teacher.id));
+        showToast("success", data.message);
+      } else {
+        showToast("error", data.error || "Failed to delete teacher");
+      }
+    } catch (error) {
+      console.error("Error deleting teacher:", error);
+      showToast("error", "An error occurred while deleting the teacher");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading || status === "loading") {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return <LoadingPage message="Loading teachers..." />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Teachers (Read-Only)</h1>
-          <span className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg font-semibold">
-            View Only
-          </span>
+          <h1 className="text-3xl font-bold text-gray-900">Teachers</h1>
         </div>
 
         <div className="card mb-6">
@@ -80,6 +116,7 @@ export default function ManagementTeachersPage() {
                   <th>Halaqas</th>
                   <th>Students</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -96,12 +133,12 @@ export default function ManagementTeachersPage() {
                     <td>{teacher.gender}</td>
                     <td>{teacher.employmentType.replace(/_/g, " ")}</td>
                     <td>{teacher.certificate || "N/A"}</td>
-                    <td>{teacher.halaqas.length}</td>
+                    <td>{teacher.halaqas?.length || 0}</td>
                     <td>
-                      {teacher.halaqas.reduce(
+                      {teacher.halaqas?.reduce(
                         (sum: number, h: any) => sum + h.students.length,
                         0
-                      )}
+                      ) || 0}
                     </td>
                     <td>
                       <span
@@ -114,17 +151,44 @@ export default function ManagementTeachersPage() {
                         {teacher.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
+                    <td>
+                      <button
+                        onClick={() => setDeleteDialog({ isOpen: true, teacher })}
+                        disabled={actionLoading === teacher.id}
+                        className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {actionLoading === teacher.id ? (
+                          <>
+                            <LoadingSpinner size="sm" />
+                            Deleting...
+                          </>
+                        ) : (
+                          "Delete"
+                        )}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           {filteredTeachers.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No teachers found.</p>
-            </div>
+            <EmptyState
+              title="No teachers found"
+              message={searchTerm ? `No teachers match "${searchTerm}"` : "No teachers registered yet"}
+            />
           )}
         </div>
+
+        <ConfirmDialog
+          isOpen={deleteDialog.isOpen}
+          title="Delete Teacher"
+          message={`⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ${deleteDialog.teacher?.firstName} ${deleteDialog.teacher?.lastName}?\n\nThis will delete:\n• Teacher record\n• All learning records created by this teacher\n• All reports submitted\n• Remove from assigned halaqas\n\nThis action CANNOT be undone!`}
+          confirmText="Delete"
+          variant="danger"
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteDialog({ isOpen: false, teacher: null })}
+        />
       </div>
     </div>
   );

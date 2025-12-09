@@ -4,15 +4,25 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { redirect } from "next/navigation";
+import LoadingPage from "@/components/LoadingPage";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import FormField from "@/components/FormField";
+import FormSelect from "@/components/FormSelect";
+import { useToast } from "@/components/Toast";
+import { validateAmount, validateRequired } from "@/lib/utils/validation";
+import { TRANSACTION_TYPES, TRANSACTION_TYPE_LABELS } from "@/lib/constants";
+import { Student } from "@/types/student";
 
 export default function NewTransactionPage() {
   const { data: session, status } = useSession();
+  const { showToast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     type: "REGISTRATION_FEE",
     amount: "",
@@ -52,12 +62,12 @@ export default function NewTransactionPage() {
     if (file) {
       const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
       if (!validTypes.includes(file.type)) {
-        alert("Please upload an image file (JPEG, PNG, GIF, WebP)");
+        showToast("error", "Please upload an image file (JPEG, PNG, GIF, WebP)");
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        alert("File size must be less than 5MB");
+        showToast("error", "File size must be less than 5MB");
         return;
       }
 
@@ -86,14 +96,14 @@ export default function NewTransactionPage() {
       if (res.ok) {
         const data = await res.json();
         setFormData({ ...formData, photoUrl: data.url });
-        alert("Check photo uploaded successfully!");
+        showToast("success", "Check photo uploaded successfully!");
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to upload photo");
+        showToast("error", data.error || "Failed to upload photo");
       }
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Failed to upload photo");
+      showToast("error", "Failed to upload photo");
     } finally {
       setUploading(false);
     }
@@ -107,8 +117,14 @@ export default function NewTransactionPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Upload file first if selected but not uploaded yet
+    setErrors({});
+
+    const amountValidation = validateAmount(formData.amount);
+    if (!amountValidation.valid) {
+      setErrors({ amount: amountValidation.error || "" });
+      return;
+    }
+
     if (selectedFile && !formData.photoUrl) {
       await handleUpload();
     }
@@ -121,19 +137,22 @@ export default function NewTransactionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          amount: parseFloat(formData.amount),
           studentId: formData.studentId || null,
           photoUrl: formData.photoUrl || null,
         }),
       });
 
       if (res.ok) {
+        showToast("success", "Transaction recorded successfully");
         router.push("/accounts/transactions");
       } else {
-        alert("Failed to create transaction");
+        const data = await res.json();
+        showToast("error", data.error || "Failed to create transaction");
       }
     } catch (error) {
       console.error("Error creating transaction:", error);
-      alert("An error occurred");
+      showToast("error", "An error occurred while creating the transaction");
     } finally {
       setLoading(false);
     }
@@ -149,7 +168,7 @@ export default function NewTransactionPage() {
   };
 
   if (status === "loading") {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return <LoadingPage message="Loading form..." />;
   }
 
   return (
@@ -170,64 +189,55 @@ export default function NewTransactionPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Payment Type *
-                </label>
-                <select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleChange}
-                  className="input-field"
-                  required
-                >
-                  <option value="REGISTRATION_FEE">Registration Fee</option>
-                  <option value="SCHOOL_FEE">School Fee</option>
-                  <option value="UNIFORM_FEE">Uniform Fee</option>
-                  <option value="OTHER_FEE">Other Fee</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Amount * (GMD)
-                </label>
+              <FormSelect
+                label="Payment Type"
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                required
+                options={Object.entries(TRANSACTION_TYPES)
+                  .filter(([key]) => key !== "WITHDRAWAL")
+                  .map(([key, value]) => ({
+                    value,
+                    label: TRANSACTION_TYPE_LABELS[value] || value,
+                  }))}
+              />
+              <FormField
+                label="Amount (GMD)"
+                name="amount"
+                required
+                error={errors.amount}
+              >
                 <input
                   type="number"
                   name="amount"
                   value={formData.amount}
                   onChange={handleChange}
-                  className="input-field"
+                  className={`input-field ${errors.amount ? "border-red-500" : ""}`}
                   step="0.01"
                   min="0"
                   required
+                  disabled={loading}
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Student *
-              </label>
-              <select
-                name="studentId"
-                value={formData.studentId}
-                onChange={handleChange}
-                className="input-field"
-                required
-              >
-                <option value="">Select Student</option>
-                {students.map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.firstName} {student.fatherName} {student.lastName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormSelect
+              label="Student"
+              name="studentId"
+              value={formData.studentId}
+              onChange={handleChange}
+              required
+              options={[
+                { value: "", label: "Select Student" },
+                ...students.map((student) => ({
+                  value: student.id,
+                  label: `${student.firstName} ${student.fatherName} ${student.lastName} (${student.studentId})`,
+                })),
+              ]}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Date *
-              </label>
+            <FormField label="Date" name="date" required>
               <input
                 type="date"
                 name="date"
@@ -235,13 +245,11 @@ export default function NewTransactionPage() {
                 onChange={handleChange}
                 className="input-field"
                 required
+                disabled={loading}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description / Notes
-              </label>
+            <FormField label="Description / Notes" name="description">
               <textarea
                 name="description"
                 value={formData.description}
@@ -249,8 +257,9 @@ export default function NewTransactionPage() {
                 className="input-field"
                 rows={3}
                 placeholder="Additional notes about this payment..."
+                disabled={loading}
               />
-            </div>
+            </FormField>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -293,9 +302,16 @@ export default function NewTransactionPage() {
                         type="button"
                         onClick={handleUpload}
                         disabled={uploading}
-                        className="btn-primary flex-1"
+                        className="btn-primary flex-1 flex items-center justify-center"
                       >
-                        {uploading ? "Uploading..." : "Upload Photo"}
+                        {uploading ? (
+                          <>
+                            <LoadingSpinner size="sm" className="mr-2" />
+                            Uploading...
+                          </>
+                        ) : (
+                          "Upload Photo"
+                        )}
                       </button>
                     )}
                     <button
@@ -316,10 +332,17 @@ export default function NewTransactionPage() {
             <div className="flex space-x-4">
               <button
                 type="submit"
-                disabled={loading}
-                className="btn-primary disabled:opacity-50"
+                disabled={loading || uploading}
+                className="btn-primary flex items-center justify-center"
               >
-                {loading ? "Saving..." : "Record Payment"}
+                {loading ? (
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  "Record Payment"
+                )}
               </button>
               <button
                 type="button"

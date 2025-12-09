@@ -4,12 +4,24 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import LoadingPage from "@/components/LoadingPage";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import EmptyState from "@/components/EmptyState";
+import { useToast } from "@/components/Toast";
+import { Student } from "@/types/student";
 
 export default function ManagementStudentsPage() {
   const { data: session, status } = useSession();
-  const [students, setStudents] = useState<any[]>([]);
+  const { showToast } = useToast();
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; student: Student | null }>({
+    isOpen: false,
+    student: null,
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -44,18 +56,42 @@ export default function ManagementStudentsPage() {
       .includes(searchTerm.toLowerCase())
   );
 
+  const handleDelete = async () => {
+    if (!deleteDialog.student) return;
+    const student = deleteDialog.student;
+
+    setActionLoading(student.id);
+    setDeleteDialog({ isOpen: false, student: null });
+    try {
+      const res = await fetch(`/api/students/${student.id}/delete`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setStudents(students.filter((s) => s.id !== student.id));
+        showToast("success", data.message);
+      } else {
+        showToast("error", data.error || "Failed to delete student");
+      }
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      showToast("error", "An error occurred while deleting the student");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading || status === "loading") {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return <LoadingPage message="Loading students..." />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Students (Read-Only)</h1>
-          <span className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg font-semibold">
-            View Only
-          </span>
+          <h1 className="text-3xl font-bold text-gray-900">Students</h1>
         </div>
 
         <div className="card mb-6">
@@ -79,6 +115,7 @@ export default function ManagementStudentsPage() {
                   <th>Halaqa</th>
                   <th>Registration Date</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -107,12 +144,44 @@ export default function ManagementStudentsPage() {
                         {student.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
+                    <td>
+                      <button
+                        onClick={() => setDeleteDialog({ isOpen: true, student })}
+                        disabled={actionLoading === student.id}
+                        className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {actionLoading === student.id ? (
+                          <>
+                            <LoadingSpinner size="sm" />
+                            Deleting...
+                          </>
+                        ) : (
+                          "Delete"
+                        )}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {filteredStudents.length === 0 && (
+            <EmptyState
+              title="No students found"
+              message={searchTerm ? `No students match "${searchTerm}"` : "No students registered yet"}
+            />
+          )}
         </div>
+
+        <ConfirmDialog
+          isOpen={deleteDialog.isOpen}
+          title="Delete Student"
+          message={`⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ${deleteDialog.student?.firstName} ${deleteDialog.student?.lastName}?\n\nThis will delete:\n• Student record\n• All payment history\n• All learning records\n\nThis action CANNOT be undone!`}
+          confirmText="Delete"
+          variant="danger"
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteDialog({ isOpen: false, student: null })}
+        />
       </div>
     </div>
   );

@@ -5,18 +5,18 @@ import { prisma } from "@/lib/prisma";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Only ACCOUNTS can delete teachers
-    if (!session || session.user.role !== "ACCOUNTS") {
+    if (!session || (session.user.role !== "ACCOUNTS" && session.user.role !== "MANAGEMENT")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const { id } = await params;
     const teacher = await prisma.teacher.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         firstName: true,
         lastName: true,
@@ -30,21 +30,21 @@ export async function DELETE(
 
     // Delete related records first
     await prisma.learningRecord.deleteMany({
-      where: { teacherId: params.id },
+      where: { teacherId: id },
     });
 
     await prisma.report.deleteMany({
-      where: { teacherId: params.id },
+      where: { teacherId: id },
     });
 
     // Delete associated halaqas (teacherId is required, cannot be null)
     await prisma.halaqa.deleteMany({
-      where: { teacherId: params.id },
+      where: { teacherId: id },
     });
 
     // Delete the teacher
     await prisma.teacher.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({

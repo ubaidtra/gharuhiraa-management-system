@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
+import { ToastProvider } from "@/components/Toast";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import Navbar from "@/components/Navbar";
 import RegisterServiceWorker from "./register-sw";
 
@@ -28,11 +30,15 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/logo.jpg" />
       </head>
       <body>
-        <SessionProvider>
-          <RegisterServiceWorker />
-          <Navbar />
-          {children}
-        </SessionProvider>
+        <ErrorBoundary>
+          <SessionProvider>
+            <ToastProvider>
+              <RegisterServiceWorker />
+              <Navbar />
+              {children}
+            </ToastProvider>
+          </SessionProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
