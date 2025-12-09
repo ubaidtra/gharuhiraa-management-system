@@ -1,48 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 import { generateStudentId, generateTeacherId } from "../lib/idGenerator";
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Starting database seed...");
-
-  // Create default users
-  const hashedManagementPassword = await bcrypt.hash("management123", 10);
-  const hashedAccountsPassword = await bcrypt.hash("accounts123", 10);
-  const hashedTeacherPassword = await bcrypt.hash("teacher123", 10);
-
-  const managementUser = await prisma.user.upsert({
-    where: { username: "management" },
-    update: {},
-    create: {
-      username: "management",
-      password: hashedManagementPassword,
-      role: "MANAGEMENT",
-    },
-  });
-
-  const accountsUser = await prisma.user.upsert({
-    where: { username: "accounts" },
-    update: {},
-    create: {
-      username: "accounts",
-      password: hashedAccountsPassword,
-      role: "ACCOUNTS",
-    },
-  });
-
-  const teacherUser = await prisma.user.upsert({
-    where: { username: "teacher" },
-    update: {},
-    create: {
-      username: "teacher",
-      password: hashedTeacherPassword,
-      role: "TEACHER",
-    },
-  });
-
-  console.log("✅ Created default users");
 
   // Create teachers
   const teacher1 = await prisma.teacher.create({
@@ -275,10 +237,6 @@ async function main() {
   console.log("✅ Created learning records");
 
   console.log("🎉 Database seeding completed successfully!");
-  console.log("\n📝 Test Credentials:");
-  console.log("  Management: username='management', password='management123'");
-  console.log("  Accounts:   username='accounts', password='accounts123'");
-  console.log("  Teacher:    username='teacher', password='teacher123'");
 }
 
 main()

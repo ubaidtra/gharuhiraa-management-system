@@ -49,10 +49,6 @@ if ($LASTEXITCODE -eq 0) {
         if ($LASTEXITCODE -eq 0) {
             Write-Host "`nDatabase seeded successfully!" -ForegroundColor Green
             Write-Host "`nSetup complete!" -ForegroundColor Cyan
-            Write-Host "`nTest Credentials:" -ForegroundColor Yellow
-            Write-Host "  Management: username=management, password=management123"
-            Write-Host "  Accounts:   username=accounts, password=accounts123"
-            Write-Host "  Teacher:    username=teacher, password=teacher123"
             Write-Host "`nStart the server with: npm run dev" -ForegroundColor Cyan
             Write-Host "Access at: http://localhost:8001" -ForegroundColor Cyan
         } else {
