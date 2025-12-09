@@ -11,7 +11,7 @@ export default function NewReportPage() {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
-    reportType: "WEEKLY",
+    type: "WEEKLY",
   });
 
   useEffect(() => {
@@ -87,8 +87,8 @@ export default function NewReportPage() {
                 Report Type *
               </label>
               <select
-                name="reportType"
-                value={formData.reportType}
+                name="type"
+                value={formData.type}
                 onChange={handleChange}
                 className="input-field"
                 required

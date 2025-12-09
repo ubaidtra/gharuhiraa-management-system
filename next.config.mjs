@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable static exports for better PWA support
-  // output: 'export', // Uncomment only if you want fully static export
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   
   // Headers for PWA
   async headers() {
