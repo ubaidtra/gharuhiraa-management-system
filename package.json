@@ -14,7 +14,8 @@
     "db:studio": "prisma studio",
     "db:setup": "prisma generate && prisma db push && tsx prisma/seed.ts",
     "db:update-ids": "tsx prisma/updateExistingRecords.ts",
-    "db:clear": "tsx prisma/deleteAllData.ts"
+    "db:clear": "tsx prisma/deleteAllData.ts",
+    "db:delete-users": "tsx prisma/deleteAllUsers.ts"
   },
   "dependencies": {
     "@prisma/client": "5.18.0",
