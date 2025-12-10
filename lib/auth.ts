@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 export const authOptions: NextAuthOptions = {
   debug: process.env.NODE_ENV === "development",
   secret: process.env.NEXTAUTH_SECRET,
+  url: process.env.NEXTAUTH_URL,
   providers: [
     CredentialsProvider({
       name: "Credentials",

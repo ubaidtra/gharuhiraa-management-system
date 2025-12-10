@@ -33,8 +33,7 @@ function LoginForm() {
       if (result?.error) {
         setError("Invalid username or password");
       } else if (result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
+        window.location.href = callbackUrl;
       }
     } catch (err) {
       setError("An error occurred. Please try again.");

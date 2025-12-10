@@ -1,10 +1,45 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import { generateStudentId, generateTeacherId } from "../lib/idGenerator";
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Starting database seed...");
+
+  // Create users
+  const users = [
+    { username: "management", password: "management123", role: "MANAGEMENT" },
+    { username: "accounts", password: "accounts123", role: "ACCOUNTS" },
+    { username: "teacher", password: "teacher123", role: "TEACHER" },
+  ];
+
+  for (const userData of users) {
+    const existingUser = await prisma.user.findUnique({
+      where: { username: userData.username },
+    });
+
+    if (existingUser) {
+      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      await prisma.user.update({
+        where: { username: userData.username },
+        data: { password: hashedPassword, role: userData.role },
+      });
+      console.log(`✅ Updated user: ${userData.username}`);
+    } else {
+      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      await prisma.user.create({
+        data: {
+          username: userData.username,
+          password: hashedPassword,
+          role: userData.role,
+        },
+      });
+      console.log(`✅ Created user: ${userData.username}`);
+    }
+  }
+
+  console.log("✅ Created/updated users");
 
   // Create teachers
   const teacher1 = await prisma.teacher.create({
