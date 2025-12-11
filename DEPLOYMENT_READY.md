@@ -90,8 +90,8 @@ git add .
 # 2. Commit
 git commit -m "Initial commit - Gharu Hiraa School Management System"
 
-# 3. Create repository on GitHub.com first, then:
-git remote add origin https://github.com/YOUR_USERNAME/Gharu-Hiraa.git
+# 3. Repository already configured:
+git remote set-url origin https://github.com/ubaidtra/gharuhiraa-management-system.git
 
 # 4. Push
 git branch -M main

@@ -62,25 +62,27 @@ git add .
 git commit -m "Initial commit - Gharu Hiraa School Management System"
 ```
 
-### Step 5: Create GitHub Repository
+### Step 5: GitHub Repository
 
-1. Go to [github.com](https://github.com) and sign in
-2. Click the **"+"** icon → **"New repository"**
-3. Repository name: `Gharu-Hiraa` (or your preferred name)
-4. Description: `School Management System for Gharu Hiraa`
-5. Choose **Public** or **Private**
-6. **DO NOT** initialize with README, .gitignore, or license
-7. Click **"Create repository"**
+✅ **Repository already exists!**
+- Repository: [gharuhiraa-management-system](https://github.com/ubaidtra/gharuhiraa-management-system.git)
+- Status: Empty (ready for your code)
+
+No need to create a new repository - we'll push to this one.
 
 ### Step 6: Connect Local Repository to GitHub
 
-After creating the repository, GitHub will show you commands. Use these:
+Your repository is already configured! The remote is set to:
+```
+https://github.com/ubaidtra/gharuhiraa-management-system.git
+```
 
+If you need to change it, use:
 ```powershell
-# Add remote repository (replace YOUR_USERNAME with your GitHub username)
-git remote add origin https://github.com/YOUR_USERNAME/Gharu-Hiraa.git
+# Update remote URL (already done for you)
+git remote set-url origin https://github.com/ubaidtra/gharuhiraa-management-system.git
 
-# Verify remote was added
+# Verify remote
 git remote -v
 ```
 
@@ -100,7 +102,7 @@ git push -u origin main
 
 ### Step 8: Verify on GitHub
 
-1. Visit your repository: `https://github.com/YOUR_USERNAME/Gharu-Hiraa`
+1. Visit your repository: [https://github.com/ubaidtra/gharuhiraa-management-system](https://github.com/ubaidtra/gharuhiraa-management-system)
 2. You should see all your files
 3. ✅ **GitHub deployment complete!**
 
@@ -118,7 +120,7 @@ git push -u origin main
 ### Step 2: Import Your Project
 
 1. In Vercel dashboard, click **"Add New..."** → **"Project"**
-2. Find your repository: `YOUR_USERNAME/Gharu-Hiraa`
+2. Find your repository: `ubaidtra/gharuhiraa-management-system`
 3. Click **"Import"**
 
 ### Step 3: Configure Project Settings
