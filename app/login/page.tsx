@@ -33,8 +33,8 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 px-4 py-8">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8 mx-auto">
         <div className="text-center mb-8">
           <img src="/logo.jpg" alt="Gharu Hiraa Logo" className="w-24 h-24 rounded-full object-cover mx-auto mb-4 shadow-lg border-4 border-blue-100" />
           <h1 className="text-3xl font-bold text-gray-800">Gharu Hiraa</h1>
