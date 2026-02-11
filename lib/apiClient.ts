@@ -6,94 +6,49 @@ interface ApiOptions extends RequestInit {
 }
 
 class ApiClient {
-  private baseUrl: string = "";
-
-  async request<T>(
-    endpoint: string,
-    options: ApiOptions = {}
-  ): Promise<T> {
+  async request<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
     const { timeout = 30000, retries = 0, ...fetchOptions } = options;
-
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const tid = setTimeout(() => controller.abort(), timeout);
 
     try {
-      const response = await fetch(endpoint, {
+      const res = await fetch(endpoint, {
         ...fetchOptions,
         signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          ...fetchOptions.headers,
-        },
+        headers: { "Content-Type": "application/json", ...(fetchOptions.headers as object) },
       });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({
-          error: `HTTP ${response.status}: ${response.statusText}`,
-        }));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+      clearTimeout(tid);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(data.error || `HTTP ${res.status}`);
       }
-
-      return await response.json();
-    } catch (error: unknown) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("Request timeout. Please try again.");
-      }
-
-      if (retries > 0 && this.isRetryableError(error)) {
-        await this.delay(1000);
+      return await res.json();
+    } catch (e) {
+      clearTimeout(tid);
+      if (e instanceof Error && e.name === "AbortError") throw new Error("Request timeout");
+      if (retries > 0) {
+        await new Promise((r) => setTimeout(r, 1000));
         return this.request<T>(endpoint, { ...options, retries: retries - 1 });
       }
-
-      const { message } = handleApiError(error);
-      throw new Error(message);
+      throw new Error(handleApiError(e).message);
     }
   }
 
-  private isRetryableError(error: unknown): boolean {
-    if (error instanceof Error) {
-      return (
-        error.message.includes("timeout") ||
-        error.message.includes("network") ||
-        error.message.includes("fetch")
-      );
-    }
-    return false;
+  get<T>(endpoint: string) {
+    return this.request<T>(endpoint, { method: "GET" });
   }
 
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  post<T>(endpoint: string, data?: unknown) {
+    return this.request<T>(endpoint, { method: "POST", body: data ? JSON.stringify(data) : undefined });
   }
 
-  get<T>(endpoint: string, options?: ApiOptions): Promise<T> {
-    return this.request<T>(endpoint, { ...options, method: "GET" });
+  put<T>(endpoint: string, data?: unknown) {
+    return this.request<T>(endpoint, { method: "PUT", body: data ? JSON.stringify(data) : undefined });
   }
 
-  post<T>(endpoint: string, data?: unknown, options?: ApiOptions): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: "POST",
-      body: data ? JSON.stringify(data) : undefined,
-    });
-  }
-
-  put<T>(endpoint: string, data?: unknown, options?: ApiOptions): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: "PUT",
-      body: data ? JSON.stringify(data) : undefined,
-    });
-  }
-
-  delete<T>(endpoint: string, options?: ApiOptions): Promise<T> {
-    return this.request<T>(endpoint, { ...options, method: "DELETE" });
+  delete<T>(endpoint: string) {
+    return this.request<T>(endpoint, { method: "DELETE" });
   }
 }
 
 export const apiClient = new ApiClient();
-
-

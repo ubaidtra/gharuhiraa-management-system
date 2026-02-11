@@ -12,16 +12,8 @@ export const TRANSACTION_TYPES = {
   WITHDRAWAL: "WITHDRAWAL",
 } as const;
 
-export const GENDERS = {
-  MALE: "MALE",
-  FEMALE: "FEMALE",
-} as const;
-
-export const EMPLOYMENT_TYPES = {
-  FULL_TIME: "FULL_TIME",
-  PART_TIME: "PART_TIME",
-  VOLUNTEER: "VOLUNTEER",
-} as const;
+export const GENDERS = { MALE: "MALE", FEMALE: "FEMALE" } as const;
+export const EMPLOYMENT_TYPES = { FULL_TIME: "FULL_TIME", PART_TIME: "PART_TIME", VOLUNTEER: "VOLUNTEER" } as const;
 
 export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   REGISTRATION_FEE: "Registration Fee",
@@ -47,5 +39,3 @@ export const ROLE_LABELS: Record<string, string> = {
   ACCOUNTS: "Accounts & Admin",
   TEACHER: "Teacher",
 };
-
-

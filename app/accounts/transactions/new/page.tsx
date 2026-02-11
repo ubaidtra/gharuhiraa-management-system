@@ -1,361 +1,149 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { redirect } from "next/navigation";
 import LoadingPage from "@/components/LoadingPage";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import FormField from "@/components/FormField";
 import FormSelect from "@/components/FormSelect";
+import FormTextarea from "@/components/FormTextarea";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import { useToast } from "@/components/Toast";
-import { validateAmount, validateRequired } from "@/lib/utils/validation";
-import { TRANSACTION_TYPES, TRANSACTION_TYPE_LABELS } from "@/lib/constants";
-import { Student } from "@/types/student";
+import { TRANSACTION_TYPE_LABELS } from "@/lib/constants";
 
-export default function NewTransactionPage() {
+const FEE_TYPES = ["REGISTRATION_FEE", "SCHOOL_FEE", "UNIFORM_FEE", "OTHER_FEE"];
+
+function NewTransactionForm() {
   const { data: session, status } = useSession();
-  const { showToast } = useToast();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>("");
-  const [students, setStudents] = useState<Student[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const searchParams = useSearchParams();
+  const preselectedStudentId = searchParams.get("studentId");
+  const { showToast } = useToast();
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    type: "REGISTRATION_FEE",
+    type: "SCHOOL_FEE",
     amount: "",
     description: "",
-    studentId: "",
+    date: new Date().toISOString().slice(0, 10),
+    studentId: preselectedStudentId || "",
     photoUrl: "",
-    date: new Date().toISOString().split("T")[0],
   });
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      redirect("/login");
-    }
-    if (session?.user.role !== "ACCOUNTS") {
-      redirect("/");
-    }
+    if (status === "unauthenticated") redirect("/login");
+    if (session?.user.role !== "ACCOUNTS") redirect("/");
   }, [session, status]);
 
   useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const res = await fetch("/api/students");
-        const data = await res.json();
-        setStudents(data);
-      } catch (error) {
-        console.error("Error fetching students:", error);
-      }
-    };
-
     if (session?.user.role === "ACCOUNTS") {
-      fetchStudents();
+      fetch("/api/students").then((r) => r.json()).then(setStudents).catch(console.error).finally(() => setLoading(false));
     }
   }, [session]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
-      if (!validTypes.includes(file.type)) {
-        showToast("error", "Please upload an image file (JPEG, PNG, GIF, WebP)");
-        return;
-      }
+  useEffect(() => {
+    if (preselectedStudentId) setFormData((f) => ({ ...f, studentId: preselectedStudentId }));
+  }, [preselectedStudentId]);
 
-      if (file.size > 5 * 1024 * 1024) {
-        showToast("error", "File size must be less than 5MB");
-        return;
-      }
-
-      setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleUpload = async () => {
-    if (!selectedFile) return;
-
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     setUploading(true);
     try {
-      const formDataUpload = new FormData();
-      formDataUpload.append("file", selectedFile);
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formDataUpload,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setFormData({ ...formData, photoUrl: data.url });
-        showToast("success", "Check photo uploaded successfully!");
-      } else {
-        const data = await res.json();
-        showToast("error", data.error || "Failed to upload photo");
-      }
-    } catch (error) {
-      console.error("Upload error:", error);
-      showToast("error", "Failed to upload photo");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleRemovePhoto = () => {
-    setSelectedFile(null);
-    setPreviewUrl("");
-    setFormData({ ...formData, photoUrl: "" });
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok && data.url) setFormData((f) => ({ ...f, photoUrl: data.url }));
+      else showToast("error", data.error || "Upload failed");
+    } catch { showToast("error", "Upload failed"); }
+    finally { setUploading(false); e.target.value = ""; }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({});
-
-    const amountValidation = validateAmount(formData.amount);
-    if (!amountValidation.valid) {
-      setErrors({ amount: amountValidation.error || "" });
+    const amount = parseFloat(formData.amount);
+    if (isNaN(amount) || amount <= 0) {
+      showToast("error", "Enter a valid amount");
       return;
     }
-
-    if (selectedFile && !formData.photoUrl) {
-      await handleUpload();
+    if (formData.type !== "WITHDRAWAL" && !formData.studentId) {
+      showToast("error", "Select a student for fee payment");
+      return;
     }
-    
-    setLoading(true);
-
+    setSaving(true);
     try {
+      const payload = {
+        type: formData.type,
+        amount,
+        description: formData.description || null,
+        date: formData.date,
+        studentId: formData.type === "WITHDRAWAL" ? null : formData.studentId || null,
+        photoUrl: formData.photoUrl || null,
+      };
       const res = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          amount: parseFloat(formData.amount),
-          studentId: formData.studentId || null,
-          photoUrl: formData.photoUrl || null,
-        }),
+        body: JSON.stringify(payload),
       });
-
+      const data = await res.json();
       if (res.ok) {
-        showToast("success", "Transaction recorded successfully");
+        showToast("success", "Payment recorded");
         router.push("/accounts/transactions");
-      } else {
-        const data = await res.json();
-        showToast("error", data.error || "Failed to create transaction");
-      }
-    } catch (error) {
-      console.error("Error creating transaction:", error);
-      showToast("error", "An error occurred while creating the transaction");
-    } finally {
-      setLoading(false);
-    }
+      } else showToast("error", data.error || "Failed");
+    } catch { showToast("error", "Failed"); }
+    finally { setSaving(false); }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  if (loading || status === "loading") return <LoadingPage message="Loading..." />;
 
-  if (status === "loading") {
-    return <LoadingPage message="Loading form..." />;
-  }
+  const typeOptions = FEE_TYPES.map((k) => ({ value: k, label: TRANSACTION_TYPE_LABELS[k] }));
+  const studentOptions = students.filter((s) => s.isActive !== false).map((s) => ({ value: s.id, label: `${s.studentId} - ${s.firstName} ${s.lastName}` }));
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Record Payment / Fee</h1>
-
-        <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-green-900 mb-2">
-                Recording a Payment
-              </h3>
-              <p className="text-sm text-green-800">
-                Use this form to record incoming payments and fees from students.
-                For withdrawals and expenses, use the <a href="/accounts/withdrawals/new" className="underline font-semibold">Withdrawals page</a>.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormSelect
-                label="Payment Type"
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                required
-                options={Object.entries(TRANSACTION_TYPES)
-                  .filter(([key]) => key !== "WITHDRAWAL")
-                  .map(([key, value]) => ({
-                    value,
-                    label: TRANSACTION_TYPE_LABELS[value] || value,
-                  }))}
-              />
-              <FormField
-                label="Amount (GMD)"
-                name="amount"
-                required
-                error={errors.amount}
-              >
-                <input
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleChange}
-                  className={`input-field ${errors.amount ? "border-red-500" : ""}`}
-                  step="0.01"
-                  min="0"
-                  required
-                  disabled={loading}
-                />
-              </FormField>
-            </div>
-
-            <FormSelect
-              label="Student"
-              name="studentId"
-              value={formData.studentId}
-              onChange={handleChange}
-              required
-              options={[
-                { value: "", label: "Select Student" },
-                ...students.map((student) => ({
-                  value: student.id,
-                  label: `${student.firstName} ${student.fatherName} ${student.lastName} (${student.studentId})`,
-                })),
-              ]}
-            />
-
-            <FormField label="Date" name="date" required>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                className="input-field"
-                required
-                disabled={loading}
-              />
-            </FormField>
-
-            <FormField label="Description / Notes" name="description">
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                className="input-field"
-                rows={3}
-                placeholder="Additional notes about this payment..."
-                disabled={loading}
-              />
-            </FormField>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Check Photo (Optional)
-              </label>
-              
-              {!previewUrl && !formData.photoUrl && (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="payment-photo-upload"
-                  />
-                  <label htmlFor="payment-photo-upload" className="cursor-pointer">
-                    <div className="flex flex-col items-center">
-                      <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-sm text-gray-600">Click to upload check photo</span>
-                      <span className="text-xs text-gray-500 mt-1">PNG, JPG, GIF, WebP up to 5MB</span>
-                    </div>
-                  </label>
-                </div>
-              )}
-
-              {(previewUrl || formData.photoUrl) && (
-                <div className="space-y-3">
-                  <div className="relative border border-gray-300 rounded-lg overflow-hidden">
-                    <img
-                      src={previewUrl || formData.photoUrl}
-                      alt="Check preview"
-                      className="w-full h-48 object-cover"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    {selectedFile && !formData.photoUrl && (
-                      <button
-                        type="button"
-                        onClick={handleUpload}
-                        disabled={uploading}
-                        className="btn-primary flex-1 flex items-center justify-center"
-                      >
-                        {uploading ? (
-                          <>
-                            <LoadingSpinner size="sm" className="mr-2" />
-                            Uploading...
-                          </>
-                        ) : (
-                          "Upload Photo"
-                        )}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleRemovePhoto}
-                      className="btn-secondary"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  {formData.photoUrl && (
-                    <p className="text-xs text-green-600">Photo uploaded successfully!</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="flex space-x-4">
-              <button
-                type="submit"
-                disabled={loading || uploading}
-                className="btn-primary flex items-center justify-center"
-              >
-                {loading ? (
-                  <>
-                    <LoadingSpinner size="sm" className="mr-2" />
-                    Saving...
-                  </>
-                ) : (
-                  "Record Payment"
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="btn-secondary"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+      <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Link href="/accounts/transactions" className="text-blue-600 hover:text-blue-800 text-sm mb-4 inline-block">Back to Payments</Link>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Record Payment</h1>
+        <form onSubmit={handleSubmit} className="card space-y-6">
+          <FormSelect label="Type" name="type" value={formData.type} onChange={handleChange} options={typeOptions} />
+          <FormField label="Amount (GMD)" name="amount" required>
+            <input type="number" name="amount" value={formData.amount} onChange={handleChange} className="input-field" step="0.01" min="0" required disabled={saving} />
+          </FormField>
+          <FormField label="Date" name="date" required>
+            <input type="date" name="date" value={formData.date} onChange={handleChange} className="input-field" required disabled={saving} />
+          </FormField>
+          <FormSelect label="Student" name="studentId" value={formData.studentId} onChange={handleChange} options={[{ value: "", label: "Select student" }, ...studentOptions]} required />
+          <FormTextarea label="Description" name="description" value={formData.description} onChange={handleChange} rows={2} />
+          <FormField label="Receipt Photo (optional)" name="photoUrl">
+            <input type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploading || saving} className="input-field" />
+            {formData.photoUrl && <p className="text-sm text-green-600 mt-1">Uploaded. <button type="button" onClick={() => setFormData((f) => ({ ...f, photoUrl: "" }))} className="text-red-600">Remove</button></p>}
+          </FormField>
+          <div className="flex gap-2">
+            <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2">
+              {saving ? <LoadingSpinner size="sm" /> : null} Record
+            </button>
+            <Link href="/accounts/transactions" className="btn-secondary">Cancel</Link>
+          </div>
+        </form>
       </div>
     </div>
   );
 }
 
+export default function NewTransactionPage() {
+  return (
+    <Suspense fallback={<LoadingPage message="Loading..." />}>
+      <NewTransactionForm />
+    </Suspense>
+  );
+}

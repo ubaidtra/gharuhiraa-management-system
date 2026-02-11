@@ -1,14 +1,10 @@
-"use client";
-
-import { ReactNode } from "react";
-
 interface FormFieldProps {
   label: string;
   name: string;
   required?: boolean;
   error?: string;
   hint?: string;
-  children: ReactNode;
+  children: React.ReactNode;
   className?: string;
 }
 
@@ -33,5 +29,3 @@ export default function FormField({
     </div>
   );
 }
-
-

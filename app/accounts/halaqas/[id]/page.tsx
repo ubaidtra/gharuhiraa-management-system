@@ -2,201 +2,99 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { redirect } from "next/navigation";
+import LoadingPage from "@/components/LoadingPage";
+import EmptyState from "@/components/EmptyState";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 
-export default function EditHalaqaPage() {
+export default function HalaqaDetailPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const params = useParams();
-  const halaqaId = params.id as string;
-  
-  const [loading, setLoading] = useState(false);
-  const [fetchLoading, setFetchLoading] = useState(true);
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [formData, setFormData] = useState({
-    name: "",
-    studentLevel: "",
-    teacherId: "",
-    isActive: true,
-  });
+  const { showToast } = useToast();
+  const id = params.id as string;
+  const [halaqa, setHalaqa] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [deleteDialog, setDeleteDialog] = useState(false);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      redirect("/login");
-    }
-    if (session?.user.role !== "ACCOUNTS") {
-      redirect("/");
-    }
+    if (status === "unauthenticated") redirect("/login");
+    if (session?.user.role !== "ACCOUNTS") redirect("/");
   }, [session, status]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [halaqaRes, teachersRes] = await Promise.all([
-          fetch(`/api/halaqas/${halaqaId}`),
-          fetch("/api/teachers"),
-        ]);
-
-        if (halaqaRes.ok) {
-          const halaqa = await halaqaRes.json();
-          const teachersData = await teachersRes.json();
-
-          setFormData({
-            name: halaqa.name,
-            studentLevel: halaqa.studentLevel || "",
-            teacherId: halaqa.teacherId,
-            isActive: halaqa.isActive,
-          });
-          setTeachers(teachersData);
-        } else {
-          alert("Halaqa not found");
-          router.push("/accounts/halaqas");
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        alert("Error loading halaqa");
-      } finally {
-        setFetchLoading(false);
-      }
-    };
-
-    if (session?.user.role === "ACCOUNTS" && halaqaId) {
-      fetchData();
+    if (session?.user.role === "ACCOUNTS" && id) {
+      fetch(`/api/halaqas/${id}`).then((r) => r.json()).then(setHalaqa).catch(console.error).finally(() => setLoading(false));
     }
-  }, [session, halaqaId, router]);
+  }, [session, id]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
+  const handleDelete = async () => {
+    setDeleteDialog(false);
     try {
-      const res = await fetch(`/api/halaqas/${halaqaId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
+      const res = await fetch(`/api/halaqas/${id}`, { method: "DELETE" });
       if (res.ok) {
-        router.push("/accounts/halaqas");
+        showToast("success", "Halaqa deleted");
+        window.location.href = "/accounts/halaqas";
       } else {
-        const error = await res.json();
-        alert(error.error || "Failed to update halaqa");
+        const d = await res.json();
+        showToast("error", d.error || "Failed");
       }
-    } catch (error) {
-      console.error("Error updating halaqa:", error);
-      alert("An error occurred");
-    } finally {
-      setLoading(false);
-    }
+    } catch { showToast("error", "Failed"); }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const value = e.target.type === "checkbox" 
-      ? (e.target as HTMLInputElement).checked 
-      : e.target.value;
-      
-    setFormData({
-      ...formData,
-      [e.target.name]: value,
-    });
-  };
+  if (loading || status === "loading") return <LoadingPage message="Loading..." />;
+  if (!halaqa) return <div className="p-8 text-center text-gray-500">Halaqa not found</div>;
 
-  if (status === "loading" || fetchLoading) {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
-  }
+  const students = halaqa.Student || halaqa.students || [];
+  const teacher = halaqa.Teacher || halaqa.teacher;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Edit Halaqa</h1>
-
-        <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Halaqa Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="input-field"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Student Level
-              </label>
-              <input
-                type="text"
-                name="studentLevel"
-                value={formData.studentLevel}
-                onChange={handleChange}
-                className="input-field"
-                placeholder="e.g., Beginner, Intermediate, Advanced"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Assigned Teacher *
-              </label>
-              <select
-                name="teacherId"
-                value={formData.teacherId}
-                onChange={handleChange}
-                className="input-field"
-                required
-              >
-                <option value="">Select Teacher</option>
-                {teachers.map((teacher) => (
-                  <option key={teacher.id} value={teacher.id}>
-                    {teacher.firstName} {teacher.lastName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="isActive"
-                id="isActive"
-                checked={formData.isActive}
-                onChange={handleChange}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
-                Halaqa is Active
-              </label>
-            </div>
-
-            <div className="flex space-x-4">
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary disabled:opacity-50"
-              >
-                {loading ? "Updating..." : "Update Halaqa"}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="btn-secondary"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Link href="/accounts/halaqas" className="text-blue-600 hover:text-blue-800 text-sm mb-4 inline-block">Back to Halaqas</Link>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">{halaqa.name}</h1>
+          <button onClick={() => setDeleteDialog(true)} className="btn-secondary text-red-600 hover:text-red-800">Delete</button>
         </div>
+        <div className="card grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div><p className="text-sm text-gray-500">Level</p><p>{halaqa.studentLevel || "-"}</p></div>
+          <div><p className="text-sm text-gray-500">Teacher</p><p>{teacher ? `${teacher.firstName} ${teacher.lastName}` : "-"}</p></div>
+          <div><p className="text-sm text-gray-500">Students</p><p>{students.length}</p></div>
+          <div><p className="text-sm text-gray-500">Status</p><p className={halaqa.isActive !== false ? "text-green-600" : "text-red-600"}>{halaqa.isActive !== false ? "Active" : "Inactive"}</p></div>
+        </div>
+        <div className="card">
+          <h3 className="text-lg font-semibold mb-4">Students</h3>
+          {students.length === 0 ? (
+            <EmptyState title="No students" message="Assign students via their profile" />
+          ) : (
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.map((s: any) => (
+                    <tr key={s.id}>
+                      <td className="font-mono text-sm">{s.studentId}</td>
+                      <td>{s.firstName} {s.lastName}</td>
+                      <td>
+                        <Link href={`/accounts/students/${s.id}`} className="text-blue-600 hover:text-blue-800 text-sm">Edit</Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        <ConfirmDialog isOpen={deleteDialog} title="Delete Halaqa" message="Permanently delete this halaqa? Students will be unassigned." confirmText="Delete" variant="danger" onConfirm={handleDelete} onCancel={() => setDeleteDialog(false)} />
       </div>
     </div>
   );
 }
-

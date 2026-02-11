@@ -1,99 +1,59 @@
-/**
- * ID Generator Utility
- * Generates unique identification numbers for students and teachers
- */
+import { supabase } from "./supabase";
 
-import { prisma } from "./prisma";
-
-/**
- * Generate a unique student ID
- * Format: STU-YYYY-NNNN (e.g., STU-2025-0001)
- */
 export async function generateStudentId(): Promise<string> {
-  const currentYear = new Date().getFullYear();
-  const prefix = `STU-${currentYear}-`;
+  const year = new Date().getFullYear();
+  const prefix = `STU-${year}-`;
+  const startOfYear = `${year}-01-01`;
 
-  // Get the count of students created this year
-  const startOfYear = new Date(currentYear, 0, 1);
-  const studentsThisYear = await prisma.student.count({
-    where: {
-      registrationDate: {
-        gte: startOfYear,
-      },
-    },
-  });
+  const { count } = await supabase
+    .from("Student")
+    .select("*", { count: "exact", head: true })
+    .gte("registrationDate", startOfYear);
 
-  // Generate next number (increment by 1)
-  const nextNumber = studentsThisYear + 1;
-  const paddedNumber = nextNumber.toString().padStart(4, "0");
+  const nextNum = (count ?? 0) + 1;
+  const studentId = `${prefix}${nextNum.toString().padStart(4, "0")}`;
 
-  const studentId = `${prefix}${paddedNumber}`;
-
-  // Check if ID already exists (edge case)
-  const existing = await prisma.student.findFirst({
-    where: { studentId },
-  });
+  const { data: existing } = await supabase
+    .from("Student")
+    .select("id")
+    .eq("studentId", studentId)
+    .maybeSingle();
 
   if (existing) {
-    // If exists, try next number
-    const nextPaddedNumber = (nextNumber + 1).toString().padStart(4, "0");
-    return `${prefix}${nextPaddedNumber}`;
+    return `${prefix}${(nextNum + 1).toString().padStart(4, "0")}`;
   }
-
   return studentId;
 }
 
-/**
- * Generate a unique teacher ID
- * Format: TCH-YYYY-NNN (e.g., TCH-2025-001)
- */
 export async function generateTeacherId(): Promise<string> {
-  const currentYear = new Date().getFullYear();
-  const prefix = `TCH-${currentYear}-`;
+  const year = new Date().getFullYear();
+  const prefix = `TCH-${year}-`;
+  const startOfYear = `${year}-01-01`;
 
-  // Get the count of teachers created this year
-  const startOfYear = new Date(currentYear, 0, 1);
-  const teachersThisYear = await prisma.teacher.count({
-    where: {
-      hireDate: {
-        gte: startOfYear,
-      },
-    },
-  });
+  const { count } = await supabase
+    .from("Teacher")
+    .select("*", { count: "exact", head: true })
+    .gte("hireDate", startOfYear);
 
-  // Generate next number (increment by 1)
-  const nextNumber = teachersThisYear + 1;
-  const paddedNumber = nextNumber.toString().padStart(3, "0");
+  const nextNum = (count ?? 0) + 1;
+  const teacherId = `${prefix}${nextNum.toString().padStart(3, "0")}`;
 
-  const teacherId = `${prefix}${paddedNumber}`;
-
-  // Check if ID already exists (edge case)
-  const existing = await prisma.teacher.findFirst({
-    where: { teacherId },
-  });
+  const { data: existing } = await supabase
+    .from("Teacher")
+    .select("id")
+    .eq("teacherId", teacherId)
+    .maybeSingle();
 
   if (existing) {
-    // If exists, try next number
-    const nextPaddedNumber = (nextNumber + 1).toString().padStart(3, "0");
-    return `${prefix}${nextPaddedNumber}`;
+    return `${prefix}${(nextNum + 1).toString().padStart(3, "0")}`;
   }
-
   return teacherId;
 }
 
-/**
- * Validate student ID format
- */
 export function isValidStudentId(id: string): boolean {
-  const pattern = /^STU-\d{4}-\d{4}$/;
-  return pattern.test(id);
+  return /^STU-\d{4}-\d{4}$/.test(id);
 }
 
-/**
- * Validate teacher ID format
- */
 export function isValidTeacherId(id: string): boolean {
-  const pattern = /^TCH-\d{4}-\d{3}$/;
-  return pattern.test(id);
+  return /^TCH-\d{4}-\d{3}$/.test(id);
 }
-

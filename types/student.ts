@@ -18,12 +18,9 @@ export interface Student {
   halaqa?: {
     id: string;
     name: string;
-    teacher?: {
-      id: string;
-      firstName: string;
-      lastName: string;
-    };
+    Teacher?: { id: string; firstName: string; lastName: string };
   } | null;
+  Halaqa?: { id: string; name: string; Teacher?: { id: string; firstName: string; lastName: string } } | null;
 }
 
 export interface StudentFormData {
@@ -38,5 +35,3 @@ export interface StudentFormData {
   photo?: string;
   halaqaId?: string;
 }
-
-

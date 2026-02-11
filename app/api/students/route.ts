@@ -1,38 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 import { generateStudentId } from "@/lib/idGenerator";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const searchParams = request.nextUrl.searchParams;
-    const halaqaId = searchParams.get("halaqaId");
+    const halaqaId = request.nextUrl.searchParams.get("halaqaId");
+    const unassigned = request.nextUrl.searchParams.get("unassigned");
+    const search = request.nextUrl.searchParams.get("search");
 
-    const students = await prisma.student.findMany({
-      where: halaqaId ? { halaqaId } : undefined,
-      include: {
-        halaqa: {
-          include: {
-            teacher: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    let query = supabase
+      .from("Student")
+      .select(`
+        *,
+        Halaqa (
+          id,
+          name,
+          Teacher (
+            id,
+            firstName,
+            lastName
+          )
+        )
+      `)
+      .order("createdAt", { ascending: false });
 
-    return NextResponse.json(students);
-  } catch (error) {
-    console.error("Error fetching students:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch students" },
-      { status: 500 }
-    );
+    if (halaqaId) query = query.eq("halaqaId", halaqaId);
+    if (unassigned === "1") query = query.is("halaqaId", null);
+    if (search) query = query.or(`studentId.ilike.%${search}%,firstName.ilike.%${search}%,lastName.ilike.%${search}%`);
+
+    const { data: students, error } = await query;
+    if (error) throw error;
+
+    return NextResponse.json(students || []);
+  } catch (e) {
+    console.error("Error fetching students:", e);
+    return NextResponse.json({ error: "Failed to fetch students" }, { status: 500 });
   }
 }
 
@@ -44,32 +51,30 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
-    // Generate unique student ID
     const studentId = await generateStudentId();
-    
-    const student = await prisma.student.create({
-      data: {
+
+    const { data: student, error } = await supabase
+      .from("Student")
+      .insert({
         studentId,
         firstName: body.firstName,
         fatherName: body.fatherName,
         lastName: body.lastName,
-        dob: new Date(body.dob),
+        dob: body.dob,
         address: body.address,
         gender: body.gender,
-        phone: body.phone,
-        guardianPhone: body.guardianPhone,
-        photo: body.photo,
-      },
-    });
+        phone: body.phone || null,
+        guardianPhone: body.guardianPhone || null,
+        photo: body.photo || null,
+        halaqaId: body.halaqaId || null,
+      })
+      .select()
+      .single();
 
+    if (error) throw error;
     return NextResponse.json(student, { status: 201 });
-  } catch (error) {
-    console.error("Error creating student:", error);
-    return NextResponse.json(
-      { error: "Failed to create student" },
-      { status: 500 }
-    );
+  } catch (e) {
+    console.error("Error creating student:", e);
+    return NextResponse.json({ error: "Failed to create student" }, { status: 500 });
   }
 }
-

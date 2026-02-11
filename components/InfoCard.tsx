@@ -6,22 +6,15 @@ interface InfoCardProps {
   variant?: "default" | "info" | "warning" | "success";
 }
 
-export default function InfoCard({
-  title,
-  children,
-  icon,
-  className = "",
-  variant = "default",
-}: InfoCardProps) {
-  const variantClasses = {
+export default function InfoCard({ title, children, icon, className = "", variant = "default" }: InfoCardProps) {
+  const variants = {
     default: "bg-white border-gray-200",
     info: "bg-blue-50 border-blue-200",
     warning: "bg-orange-50 border-orange-200",
     success: "bg-green-50 border-green-200",
   };
-
   return (
-    <div className={`card border-2 ${variantClasses[variant]} ${className}`}>
+    <div className={`card border-2 ${variants[variant]} ${className}`}>
       <div className="flex items-start">
         {icon && <div className="mr-3 mt-1 flex-shrink-0">{icon}</div>}
         <div className="flex-1">
@@ -32,5 +25,3 @@ export default function InfoCard({
     </div>
   );
 }
-
-

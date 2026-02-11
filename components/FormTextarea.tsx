@@ -1,5 +1,3 @@
-"use client";
-
 import FormField from "./FormField";
 
 interface FormTextareaProps {
@@ -31,8 +29,7 @@ export default function FormTextarea({
   disabled = false,
   placeholder,
 }: FormTextareaProps) {
-  const remainingChars = maxLength ? maxLength - value.length : null;
-
+  const remaining = maxLength ? maxLength - value.length : null;
   return (
     <FormField label={label} name={name} required={required} error={error} hint={hint}>
       <textarea
@@ -47,13 +44,11 @@ export default function FormTextarea({
         className={`input-field ${error ? "border-red-500" : ""} ${className}`}
         required={required}
       />
-      {maxLength && (
-        <p className={`mt-1 text-xs ${remainingChars && remainingChars < 50 ? "text-orange-600" : "text-gray-500"}`}>
-          {remainingChars !== null ? `${remainingChars} characters remaining` : ""}
+      {maxLength && remaining !== null && (
+        <p className={`mt-1 text-xs ${remaining < 50 ? "text-orange-600" : "text-gray-500"}`}>
+          {remaining} characters remaining
         </p>
       )}
     </FormField>
   );
 }
-
-

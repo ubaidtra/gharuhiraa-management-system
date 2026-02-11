@@ -3,28 +3,28 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid())
   username  String   @unique
   password  String
-  role      String   // MANAGEMENT, ACCOUNTS, TEACHER
+  role      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Student {
-  id               String           @id @default(auto()) @map("_id") @db.ObjectId
+  id               String           @id @default(uuid())
   studentId        String           @unique
   firstName        String
   fatherName       String
   lastName         String
   dob              DateTime
   address          String
-  gender           String           // MALE, FEMALE
+  gender           String
   registrationDate DateTime         @default(now())
   phone            String?
   guardianPhone    String?
@@ -34,24 +34,24 @@ model Student {
   updatedAt        DateTime         @updatedAt
   
   halaqa           Halaqa?          @relation(fields: [halaqaId], references: [id])
-  halaqaId         String?          @db.ObjectId
+  halaqaId         String?
   learningRecords  LearningRecord[]
   transactions     Transaction[]
 }
 
 model Teacher {
-  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  id             String         @id @default(uuid())
   teacherId      String         @unique
   firstName      String
   lastName       String
-  gender         String         // MALE, FEMALE
+  gender         String
   certificate    String?
   dob            DateTime
   photo          String?
   address        String
   phone          String?
   hireDate       DateTime       @default(now())
-  employmentType String         // FULL_TIME, PART_TIME, VOLUNTEER
+  employmentType String
   isActive       Boolean        @default(true)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -62,7 +62,7 @@ model Teacher {
 }
 
 model Halaqa {
-  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  id           String    @id @default(uuid())
   name         String
   studentLevel String?
   isActive     Boolean   @default(true)
@@ -70,13 +70,13 @@ model Halaqa {
   updatedAt    DateTime  @updatedAt
   
   teacher      Teacher   @relation(fields: [teacherId], references: [id])
-  teacherId    String    @db.ObjectId
+  teacherId    String
   students     Student[]
 }
 
 model Transaction {
-  id          String          @id @default(auto()) @map("_id") @db.ObjectId
-  type        String          // REGISTRATION_FEE, SCHOOL_FEE, UNIFORM_FEE, OTHER_FEE, WITHDRAWAL
+  id          String          @id @default(uuid())
+  type        String
   amount      Float
   description String?
   date        DateTime        @default(now())
@@ -85,11 +85,11 @@ model Transaction {
   updatedAt   DateTime        @updatedAt
   
   student     Student?        @relation(fields: [studentId], references: [id])
-  studentId   String?         @db.ObjectId
+  studentId   String?
 }
 
 model LearningRecord {
-  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  id               String   @id @default(uuid())
   weekStartDate    DateTime
   attendance       Int      @default(0)
   surah            String?
@@ -106,19 +106,19 @@ model LearningRecord {
   updatedAt        DateTime @updatedAt
   
   student          Student  @relation(fields: [studentId], references: [id])
-  studentId        String   @db.ObjectId
+  studentId        String
   teacher          Teacher  @relation(fields: [teacherId], references: [id])
-  teacherId        String   @db.ObjectId
+  teacherId        String
   
   @@unique([studentId, weekStartDate])
 }
 
 model Report {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(uuid())
   title       String
   content     String
-  type        String   // WEEKLY, MONTHLY
-  teacherId   String   @db.ObjectId
+  type        String
+  teacherId   String
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -1,30 +1,28 @@
-import { MongoClient } from "mongodb";
+import { PrismaClient } from "@prisma/client";
 
-const DATABASE_URL = process.env.DATABASE_URL || "mongodb+srv://traubaid:ubaid281986@cluster0.cevggcp.mongodb.net/ubaitech_portio?retryWrites=true&w=majority";
+const prisma = new PrismaClient();
 
 async function fixUsers() {
-  const client = new MongoClient(DATABASE_URL);
-
   try {
-    await client.connect();
-    console.log("Connected to MongoDB");
+    console.log("Connected to database");
 
-    const db = client.db("ubaitech_portio");
-    const collection = db.collection("User");
+    const result = await prisma.user.deleteMany({ 
+      where: { username: null } 
+    });
+    console.log(`✓ Deleted ${result.count} users with null username`);
 
-    const result = await collection.deleteMany({ username: null });
-    console.log(`✓ Deleted ${result.deletedCount} users with null username`);
-
-    const allUsers = await collection.find({}).toArray();
+    const allUsers = await prisma.user.findMany({
+      select: { id: true, username: true, role: true },
+    });
     console.log(`\nCurrent users in database: ${allUsers.length}`);
-    allUsers.forEach((user: any) => {
+    allUsers.forEach((user) => {
       console.log(`  - ${user.username || "null"} (${user.role || "unknown"})`);
     });
   } catch (error) {
     console.error("Error fixing users:", error);
     process.exit(1);
   } finally {
-    await client.close();
+    await prisma.$disconnect();
   }
 }
 

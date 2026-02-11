@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET(
   request: NextRequest,
@@ -9,40 +9,45 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await params;
-    const student = await prisma.student.findUnique({
-      where: { id },
-      include: {
-        halaqa: {
-          include: {
-            teacher: true,
-          },
-        },
-        learningRecords: {
-          orderBy: { weekStartDate: "desc" },
-          take: 10,
-        },
-        transactions: {
-          orderBy: { date: "desc" },
-        },
-      },
+    const { data: student, error } = await supabase
+      .from("Student")
+      .select(`
+        *,
+        Halaqa (
+          id,
+          name,
+          Teacher (id, firstName, lastName)
+        )
+      `)
+      .eq("id", id)
+      .single();
+
+    if (error || !student) return NextResponse.json({ error: "Student not found" }, { status: 404 });
+
+    const { data: learningRecords } = await supabase
+      .from("LearningRecord")
+      .select("*")
+      .eq("studentId", id)
+      .order("weekStartDate", { ascending: false })
+      .limit(10);
+
+    const { data: transactions } = await supabase
+      .from("Transaction")
+      .select("*")
+      .eq("studentId", id)
+      .order("date", { ascending: false });
+
+    return NextResponse.json({
+      ...student,
+      learningRecords: learningRecords || [],
+      transactions: transactions || [],
     });
-
-    if (!student) {
-      return NextResponse.json({ error: "Student not found" }, { status: 404 });
-    }
-
-    return NextResponse.json(student);
-  } catch (error) {
-    console.error("Error fetching student:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch student" },
-      { status: 500 }
-    );
+  } catch (e) {
+    console.error("Error fetching student:", e);
+    return NextResponse.json({ error: "Failed to fetch student" }, { status: 500 });
   }
 }
 
@@ -58,54 +63,21 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const student = await prisma.student.update({
-      where: { id },
-      data: {
-        firstName: body.firstName,
-        fatherName: body.fatherName,
-        lastName: body.lastName,
-        dob: body.dob ? new Date(body.dob) : undefined,
-        address: body.address,
-        gender: body.gender,
-        phone: body.phone,
-        guardianPhone: body.guardianPhone,
-        photo: body.photo,
-        isActive: body.isActive,
-      },
-    });
+    const updateData: Record<string, unknown> = {};
+    const fields = ["firstName", "fatherName", "lastName", "dob", "address", "gender", "phone", "guardianPhone", "photo", "isActive", "halaqaId"];
+    for (const f of fields) if (body[f] !== undefined) updateData[f] = body[f];
 
+    const { data: student, error } = await supabase
+      .from("Student")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
     return NextResponse.json(student);
-  } catch (error) {
-    console.error("Error updating student:", error);
-    return NextResponse.json(
-      { error: "Failed to update student" },
-      { status: 500 }
-    );
+  } catch (e) {
+    console.error("Error updating student:", e);
+    return NextResponse.json({ error: "Failed to update student" }, { status: 500 });
   }
 }
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== "ACCOUNTS" && session.user.role !== "MANAGEMENT")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const { id } = await params;
-    await prisma.student.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ message: "Student deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting student:", error);
-    return NextResponse.json(
-      { error: "Failed to delete student" },
-      { status: 500 }
-    );
-  }
-}
-

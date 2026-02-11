@@ -1,45 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
+
+export async function PATCH(
+  request: NextRequest,
+  ctx: { params: Promise<{ id: string }> }
+) {
+  return handleToggle(ctx);
+}
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  ctx: { params: Promise<{ id: string }> }
 ) {
+  return handleToggle(ctx);
+}
+
+async function handleToggle(
+  ctx: { params: Promise<{ id: string }> }
+) {
+  const { params } = ctx;
   try {
     const session = await getServerSession(authOptions);
-    
-    // Only ACCOUNTS can toggle teacher status
     if (!session || session.user.role !== "ACCOUNTS") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-
     const { id } = await params;
-    const teacher = await prisma.teacher.findUnique({
-      where: { id },
-    });
-
-    if (!teacher) {
-      return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
-    }
-
-    // Toggle the isActive status
-    const updatedTeacher = await prisma.teacher.update({
-      where: { id },
-      data: { isActive: !teacher.isActive },
-    });
-
-    return NextResponse.json({
-      message: `Teacher ${updatedTeacher.isActive ? "activated" : "deactivated"} successfully`,
-      teacher: updatedTeacher,
-    });
-  } catch (error) {
-    console.error("Error toggling teacher status:", error);
-    return NextResponse.json(
-      { error: "Failed to toggle teacher status" },
-      { status: 500 }
-    );
+    const { data: teacher, error: fe } = await supabase.from("Teacher").select("isActive").eq("id", id).single();
+    if (fe || !teacher) return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
+    const { data: updated, error } = await supabase.from("Teacher").update({ isActive: !teacher.isActive }).eq("id", id).select().single();
+    if (error) throw error;
+    return NextResponse.json(updated);
+  } catch (e) {
+    console.error("Error toggling teacher:", e);
+    return NextResponse.json({ error: "Failed to update teacher" }, { status: 500 });
   }
 }
-

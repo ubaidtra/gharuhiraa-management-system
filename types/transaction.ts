@@ -15,12 +15,8 @@ export interface Transaction {
   createdAt: Date | string;
   updatedAt: Date | string;
   studentId?: string | null;
-  student?: {
-    id: string;
-    studentId: string;
-    firstName: string;
-    lastName: string;
-  } | null;
+  student?: { id: string; studentId: string; firstName: string; lastName: string } | null;
+  Student?: { id: string; studentId: string; firstName: string; lastName: string } | null;
 }
 
 export interface TransactionFormData {
@@ -31,5 +27,3 @@ export interface TransactionFormData {
   photoUrl?: string;
   date?: string;
 }
-
-

@@ -3,178 +3,87 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { redirect } from "next/navigation";
+import LoadingPage from "@/components/LoadingPage";
+import StatCard from "@/components/StatCard";
+import { formatCurrency } from "@/lib/utils/format";
 
-export default function ManagementStatisticsPage() {
+export default function StatisticsPage() {
   const { data: session, status } = useSession();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      redirect("/login");
-    }
-    if (session?.user.role !== "MANAGEMENT") {
-      redirect("/");
-    }
+    if (status === "unauthenticated") redirect("/login");
+    if (session?.user.role !== "MANAGEMENT") redirect("/");
   }, [session, status]);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch("/api/statistics");
-        const data = await res.json();
-        setStats(data);
-      } catch (error) {
-        console.error("Error fetching statistics:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (session?.user.role === "MANAGEMENT") {
-      fetchStats();
+      fetch("/api/statistics").then((r) => r.json()).then(setStats).catch(console.error).finally(() => setLoading(false));
     }
   }, [session]);
 
-  if (loading || status === "loading") {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
-  }
+  if (loading || status === "loading") return <LoadingPage message="Loading statistics..." />;
 
-  if (!stats) {
-    return <div className="flex justify-center items-center min-h-screen">Error loading data</div>;
-  }
+  const ov = stats?.overview || {};
+  const lp = stats?.learningProgress || {};
+  const halaqas = stats?.halaqas || [];
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Detailed Statistics</h1>
-
-        <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Statistics</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <StatCard title="Students" value={ov.totalStudents ?? 0} />
+          <StatCard title="Teachers" value={ov.totalTeachers ?? 0} />
+          <StatCard title="Halaqas" value={ov.totalHalaqas ?? 0} />
+          <StatCard title="Revenue" value={formatCurrency(ov.totalRevenue ?? 0)} />
+          <StatCard title="Net Balance" value={formatCurrency(ov.netBalance ?? 0)} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="card">
-            <h2 className="text-2xl font-semibold mb-4">Financial Overview</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Total Revenue</p>
-                <p className="text-3xl font-bold text-green-600">
-                  D{stats.overview.totalRevenue.toFixed(2)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Withdrawals</p>
-                <p className="text-3xl font-bold text-red-600">
-                  D{stats.overview.totalWithdrawals.toFixed(2)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Net Balance</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  D{stats.overview.netBalance.toFixed(2)}
-                </p>
-              </div>
+            <h3 className="text-lg font-semibold mb-4">Financial Summary</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between"><span className="text-gray-500">Total Revenue</span><span className="text-green-600 font-medium">{formatCurrency(ov.totalRevenue ?? 0)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Total Withdrawals</span><span className="text-red-600 font-medium">{formatCurrency(ov.totalWithdrawals ?? 0)}</span></div>
+              <div className="flex justify-between border-t pt-2"><span className="font-medium">Net Balance</span><span className="font-bold">{formatCurrency(ov.netBalance ?? 0)}</span></div>
             </div>
           </div>
-
           <div className="card">
-            <h2 className="text-2xl font-semibold mb-4">Enrollment Statistics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Total Students</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  {stats.overview.totalStudents}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Teachers</p>
-                <p className="text-3xl font-bold text-green-600">
-                  {stats.overview.totalTeachers}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Halaqas</p>
-                <p className="text-3xl font-bold text-purple-600">
-                  {stats.overview.totalHalaqas}
-                </p>
-              </div>
+            <h3 className="text-lg font-semibold mb-4">Learning Progress</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between"><span className="text-gray-500">Total Memorized Days</span><span>{lp.totalMemorizedDays ?? 0}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Total Murajaa Days</span><span>{lp.totalMurajaaDays ?? 0}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Total Rubu</span><span>{lp.totalRubu ?? 0}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Avg Memorized/Week</span><span>{(lp.averageMemorizedPerWeek ?? 0).toFixed(2)}</span></div>
             </div>
           </div>
-
-          <div className="card">
-            <h2 className="text-2xl font-semibold mb-4">Learning Progress Metrics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Total Memorized Days</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  {stats.learningProgress.totalMemorizedDays}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Murajaa Days</p>
-                <p className="text-3xl font-bold text-green-600">
-                  {stats.learningProgress.totalMurajaaDays}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Rubu Completed</p>
-                <p className="text-3xl font-bold text-purple-600">
-                  {stats.learningProgress.totalRubu.toFixed(2)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Avg Memorized/Week</p>
-                <p className="text-3xl font-bold text-orange-600">
-                  {stats.learningProgress.averageMemorizedPerWeek.toFixed(1)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h2 className="text-2xl font-semibold mb-4">Halaqa Distribution</h2>
-            <div className="table-container">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Halaqa Name</th>
-                    <th>Teacher</th>
-                    <th>Student Count</th>
-                    <th>Percentage</th>
+        </div>
+        <div className="card">
+          <h3 className="text-lg font-semibold mb-4">Halaqas Overview</h3>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Halaqa</th>
+                  <th>Teacher</th>
+                  <th>Students</th>
+                </tr>
+              </thead>
+              <tbody>
+                {halaqas.map((h: any) => (
+                  <tr key={h.id}>
+                    <td className="font-medium">{h.name}</td>
+                    <td>{h.teacherName}</td>
+                    <td>{h.studentCount}</td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {stats.halaqas.map((halaqa: any) => (
-                    <tr key={halaqa.id}>
-                      <td>{halaqa.name}</td>
-                      <td>{halaqa.teacherName}</td>
-                      <td>{halaqa.studentCount}</td>
-                      <td>
-                        {stats.overview.totalStudents > 0
-                          ? (
-                              (halaqa.studentCount / stats.overview.totalStudents) *
-                              100
-                            ).toFixed(1)
-                          : 0}
-                        %
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          <div className="card bg-yellow-50 border-2 border-yellow-200">
-            <h3 className="text-lg font-semibold text-yellow-900 mb-2">
-              Management Access Notice
-            </h3>
-            <p className="text-yellow-800">
-              As a Director, you have read-only access to all data. You can view
-              statistics, student records, teacher information, and learning progress, but
-              you cannot make any modifications to financial records or learning data.
-            </p>
-          </div>
+          {halaqas.length === 0 && <p className="text-gray-500 py-4">No halaqas</p>}
         </div>
       </div>
     </div>
   );
 }
-

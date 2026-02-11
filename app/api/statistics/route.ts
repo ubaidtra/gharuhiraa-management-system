@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET() {
   try {
@@ -10,51 +10,32 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Get basic counts
-    const totalStudents = await prisma.student.count({ where: { isActive: true } });
-    const totalTeachers = await prisma.teacher.count({ where: { isActive: true } });
-    const totalHalaqas = await prisma.halaqa.count({ where: { isActive: true } });
+    const { count: totalStudents } = await supabase.from("Student").select("*", { count: "exact", head: true }).eq("isActive", true);
+    const { count: totalTeachers } = await supabase.from("Teacher").select("*", { count: "exact", head: true }).eq("isActive", true);
+    const { count: totalHalaqas } = await supabase.from("Halaqa").select("*", { count: "exact", head: true }).eq("isActive", true);
+    const { data: transactions } = await supabase.from("Transaction").select("*");
 
-    // Get financial statistics
-    const transactions = await prisma.transaction.findMany();
-    const totalRevenue = transactions
-      .filter((t) => t.type !== "WITHDRAWAL")
-      .reduce((sum, t) => sum + t.amount, 0);
-    const totalWithdrawals = transactions
-      .filter((t) => t.type === "WITHDRAWAL")
-      .reduce((sum, t) => sum + t.amount, 0);
+    const totalRevenue = (transactions || []).filter((t) => t.type !== "WITHDRAWAL").reduce((s, t) => s + Number(t.amount), 0);
+    const totalWithdrawals = (transactions || []).filter((t) => t.type === "WITHDRAWAL").reduce((s, t) => s + Number(t.amount), 0);
 
-    // Get learning progress statistics
-    const recentRecords = await prisma.learningRecord.findMany({
-      orderBy: { weekStartDate: "desc" },
-      take: 100,
-    });
+    const { data: recentRecords } = await supabase
+      .from("LearningRecord")
+      .select("*")
+      .order("weekStartDate", { ascending: false })
+      .limit(100);
 
-    const totalMemorizedDays = recentRecords.reduce(
-      (sum, r) => sum + r.memorizedDays,
-      0
-    );
-    const totalMurajaaDays = recentRecords.reduce(
-      (sum, r) => sum + r.murajaaDays,
-      0
-    );
-    const totalRubu = recentRecords.reduce((sum, r) => sum + r.rubuAmount, 0);
+    const recs = recentRecords || [];
+    const totalMemorizedDays = recs.reduce((s, r) => s + (r.memorizedDays || 0), 0);
+    const totalMurajaaDays = recs.reduce((s, r) => s + (r.murajaaDays || 0), 0);
+    const totalRubu = recs.reduce((s, r) => s + Number(r.rubuAmount || 0), 0);
 
-    // Get students by Halaqa
-    const halaqas = await prisma.halaqa.findMany({
-      include: {
-        _count: {
-          select: { students: true },
-        },
-        teacher: true,
-      },
-    });
+    const { data: halaqas } = await supabase.from("Halaqa").select("*, Teacher(*), Student(*)");
 
     return NextResponse.json({
       overview: {
-        totalStudents,
-        totalTeachers,
-        totalHalaqas,
+        totalStudents: totalStudents ?? 0,
+        totalTeachers: totalTeachers ?? 0,
+        totalHalaqas: totalHalaqas ?? 0,
         totalRevenue,
         totalWithdrawals,
         netBalance: totalRevenue - totalWithdrawals,
@@ -63,24 +44,17 @@ export async function GET() {
         totalMemorizedDays,
         totalMurajaaDays,
         totalRubu,
-        averageMemorizedPerWeek:
-          recentRecords.length > 0
-            ? totalMemorizedDays / recentRecords.length
-            : 0,
+        averageMemorizedPerWeek: recs.length > 0 ? totalMemorizedDays / recs.length : 0,
       },
-      halaqas: halaqas.map((h) => ({
+      halaqas: (halaqas || []).map((h: { id: string; name: string; Teacher?: { firstName: string; lastName: string }; Student?: unknown[] }) => ({
         id: h.id,
         name: h.name,
-        teacherName: `${h.teacher.firstName} ${h.teacher.lastName}`,
-        studentCount: h._count.students,
+        teacherName: h.Teacher ? `${h.Teacher.firstName} ${h.Teacher.lastName}` : "N/A",
+        studentCount: (h.Student || []).length,
       })),
     });
-  } catch (error) {
-    console.error("Error fetching statistics:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch statistics" },
-      { status: 500 }
-    );
+  } catch (e) {
+    console.error("Error fetching statistics:", e);
+    return NextResponse.json({ error: "Failed to fetch statistics" }, { status: 500 });
   }
 }
-

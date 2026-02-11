@@ -1,5 +1,3 @@
-"use client";
-
 import FormField from "./FormField";
 
 interface Option {
@@ -18,6 +16,7 @@ interface FormSelectProps {
   hint?: string;
   className?: string;
   disabled?: boolean;
+  placeholder?: string;
 }
 
 export default function FormSelect({
@@ -31,6 +30,7 @@ export default function FormSelect({
   hint,
   className = "",
   disabled = false,
+  placeholder,
 }: FormSelectProps) {
   return (
     <FormField label={label} name={name} required={required} error={error} hint={hint}>
@@ -43,14 +43,11 @@ export default function FormSelect({
         className={`input-field ${error ? "border-red-500" : ""} ${className}`}
         required={required}
       >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
     </FormField>
   );
 }
-
-

@@ -4,6 +4,7 @@ export interface User {
   id: string;
   username: string;
   role: UserRole;
+  teacherId?: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -13,5 +14,3 @@ export interface UserFormData {
   password: string;
   role: UserRole;
 }
-
-

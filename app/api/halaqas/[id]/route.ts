@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET(
   request: NextRequest,
@@ -9,30 +9,24 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await params;
-    const halaqa = await prisma.halaqa.findUnique({
-      where: { id },
-      include: {
-        teacher: true,
-        students: true,
-      },
-    });
+    const { data: halaqa, error } = await supabase
+      .from("Halaqa")
+      .select(`
+        *,
+        Teacher (*),
+        Student (*)
+      `)
+      .eq("id", id)
+      .single();
 
-    if (!halaqa) {
-      return NextResponse.json({ error: "Halaqa not found" }, { status: 404 });
-    }
-
+    if (error || !halaqa) return NextResponse.json({ error: "Halaqa not found" }, { status: 404 });
     return NextResponse.json(halaqa);
-  } catch (error) {
-    console.error("Error fetching halaqa:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch halaqa" },
-      { status: 500 }
-    );
+  } catch (e) {
+    console.error("Error fetching halaqa:", e);
+    return NextResponse.json({ error: "Failed to fetch halaqa" }, { status: 500 });
   }
 }
 
@@ -42,63 +36,40 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await params;
     const body = await request.json();
 
-    // If user is ACCOUNTS, allow full update including teacher assignment
     if (session.user.role === "ACCOUNTS") {
-      const halaqa = await prisma.halaqa.update({
-        where: { id },
-        data: {
-          name: body.name,
-          studentLevel: body.studentLevel,
-          teacherId: body.teacherId,
-          isActive: body.isActive,
-        },
-      });
+      const updateData: Record<string, unknown> = { name: body.name, studentLevel: body.studentLevel };
+      if (body.teacherId !== undefined) updateData.teacherId = body.teacherId;
+      if (body.isActive !== undefined) updateData.isActive = body.isActive;
+      const { data: halaqa, error } = await supabase.from("Halaqa").update(updateData).eq("id", id).select().single();
+      if (error) throw error;
       return NextResponse.json(halaqa);
     }
 
-    // If user is TEACHER, only allow updating their own halaqa (name and level only)
     if (session.user.role === "TEACHER") {
-      // First, check if this halaqa is assigned to this teacher
-      const existingHalaqa = await prisma.halaqa.findUnique({
-        where: { id },
-      });
-
-      if (!existingHalaqa) {
-        return NextResponse.json({ error: "Halaqa not found" }, { status: 404 });
+      const { data: existing, error: fe } = await supabase.from("Halaqa").select("teacherId").eq("id", id).single();
+      if (fe || !existing) return NextResponse.json({ error: "Halaqa not found" }, { status: 404 });
+      if (existing.teacherId !== session.user.teacherId) {
+        return NextResponse.json({ error: "You can only edit your assigned halaqas" }, { status: 403 });
       }
-
-      if (existingHalaqa.teacherId !== session.user.id) {
-        return NextResponse.json(
-          { error: "Unauthorized - You can only edit Halaqas assigned to you" },
-          { status: 403 }
-        );
-      }
-
-      // Teachers can only update name and studentLevel, not teacherId
-      const halaqa = await prisma.halaqa.update({
-        where: { id },
-        data: {
-          name: body.name,
-          studentLevel: body.studentLevel,
-        },
-      });
+      const { data: halaqa, error } = await supabase
+        .from("Halaqa")
+        .update({ name: body.name, studentLevel: body.studentLevel })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
       return NextResponse.json(halaqa);
     }
 
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  } catch (error) {
-    console.error("Error updating halaqa:", error);
-    return NextResponse.json(
-      { error: "Failed to update halaqa" },
-      { status: 500 }
-    );
+  } catch (e) {
+    console.error("Error updating halaqa:", e);
+    return NextResponse.json({ error: "Failed to update halaqa" }, { status: 500 });
   }
 }
 
@@ -109,21 +80,14 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "ACCOUNTS") {
-      return NextResponse.json({ error: "Unauthorized - Only Accounts and Admin can delete Halaqas" }, { status: 403 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-
     const { id } = await params;
-    await prisma.halaqa.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ message: "Halaqa deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting halaqa:", error);
-    return NextResponse.json(
-      { error: "Failed to delete halaqa" },
-      { status: 500 }
-    );
+    const { error } = await supabase.from("Halaqa").delete().eq("id", id);
+    if (error) throw error;
+    return NextResponse.json({ message: "Halaqa deleted" });
+  } catch (e) {
+    console.error("Error deleting halaqa:", e);
+    return NextResponse.json({ error: "Failed to delete halaqa" }, { status: 500 });
   }
 }
-

@@ -1,10 +1,6 @@
 import LoadingSpinner from "./LoadingSpinner";
 
-interface LoadingPageProps {
-  message?: string;
-}
-
-export default function LoadingPage({ message = "Loading..." }: LoadingPageProps) {
+export default function LoadingPage({ message = "Loading..." }: { message?: string }) {
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-gray-50">
       <LoadingSpinner size="lg" />
@@ -12,5 +8,3 @@ export default function LoadingPage({ message = "Loading..." }: LoadingPageProps
     </div>
   );
 }
-
-

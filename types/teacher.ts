@@ -14,11 +14,7 @@ export interface Teacher {
   isActive: boolean;
   createdAt: Date | string;
   updatedAt: Date | string;
-  halaqas?: {
-    id: string;
-    name: string;
-    students: Array<{ id: string }>;
-  }[];
+  Halaqa?: { id: string; name: string; Student?: { id: string }[] }[];
 }
 
 export interface TeacherFormData {
@@ -32,5 +28,3 @@ export interface TeacherFormData {
   employmentType: "FULL_TIME" | "PART_TIME" | "VOLUNTEER";
   photo?: string;
 }
-
-

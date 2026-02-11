@@ -43,6 +43,5 @@ export const permissions = {
 };
 
 export function hasPermission(role: Role, permission: keyof typeof permissions.MANAGEMENT): boolean {
-  return permissions[role][permission] || false;
+  return permissions[role]?.[permission] ?? false;
 }
-

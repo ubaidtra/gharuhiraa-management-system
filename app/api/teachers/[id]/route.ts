@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function GET(
   request: NextRequest,
@@ -9,33 +9,24 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await params;
-    const teacher = await prisma.teacher.findUnique({
-      where: { id },
-      include: {
-        halaqas: {
-          include: {
-            students: true,
-          },
-        },
-      },
-    });
+    const { data: teacher, error } = await supabase
+      .from("Teacher")
+      .select(`
+        *,
+        Halaqa (id, name, Student (id))
+      `)
+      .eq("id", id)
+      .single();
 
-    if (!teacher) {
-      return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
-    }
-
-    return NextResponse.json(teacher);
-  } catch (error) {
-    console.error("Error fetching teacher:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch teacher" },
-      { status: 500 }
-    );
+    if (error || !teacher) return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
+    const formatted = { ...teacher, halaqas: (teacher.Halaqa || []).map((h: { Student?: { id: string }[] }) => ({ ...h, students: h.Student || [] })) };
+    return NextResponse.json(formatted);
+  } catch (e) {
+    console.error("Error fetching teacher:", e);
+    return NextResponse.json({ error: "Failed to fetch teacher" }, { status: 500 });
   }
 }
 
@@ -51,29 +42,16 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const teacher = await prisma.teacher.update({
-      where: { id },
-      data: {
-        firstName: body.firstName,
-        lastName: body.lastName,
-        gender: body.gender,
-        certificate: body.certificate,
-        dob: body.dob ? new Date(body.dob) : undefined,
-        photo: body.photo,
-        address: body.address,
-        phone: body.phone,
-        employmentType: body.employmentType,
-        isActive: body.isActive,
-      },
-    });
+    const updateData: Record<string, unknown> = {};
+    const fields = ["firstName", "lastName", "gender", "certificate", "photo", "address", "phone", "employmentType", "isActive"];
+    for (const f of fields) if (body[f] !== undefined) updateData[f] = body[f];
+    if (body.dob) updateData.dob = body.dob;
 
+    const { data: teacher, error } = await supabase.from("Teacher").update(updateData).eq("id", id).select().single();
+    if (error) throw error;
     return NextResponse.json(teacher);
-  } catch (error) {
-    console.error("Error updating teacher:", error);
-    return NextResponse.json(
-      { error: "Failed to update teacher" },
-      { status: 500 }
-    );
+  } catch (e) {
+    console.error("Error updating teacher:", e);
+    return NextResponse.json({ error: "Failed to update teacher" }, { status: 500 });
   }
 }
-

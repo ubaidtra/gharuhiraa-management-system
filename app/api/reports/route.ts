@@ -1,121 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
-// GET - List reports (Teachers: own reports, Management: all reports)
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (session.user.role !== "TEACHER" && session.user.role !== "MANAGEMENT") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-
-    let reports;
-
-    if (session.user.role === "TEACHER") {
-      // Teachers see only their own reports
-      reports = await prisma.report.findMany({
-        where: { teacherId: session.user.id },
-        include: {
-          teacher: {
-            select: {
-              id: true,
-              teacherId: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      });
-    } else if (session.user.role === "MANAGEMENT") {
-      // Directors see all reports
-      reports = await prisma.report.findMany({
-        include: {
-          teacher: {
-            select: {
-              id: true,
-              teacherId: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      });
-    } else {
-      return NextResponse.json(
-        { error: "Unauthorized - Only Teachers and Directors can view reports" },
-        { status: 403 }
-      );
+    let query = supabase
+      .from("Report")
+      .select("*, Teacher(id, teacherId, firstName, lastName)")
+      .order("createdAt", { ascending: false });
+    if (session.user.role === "TEACHER" && session.user.teacherId) {
+      query = query.eq("teacherId", session.user.teacherId);
     }
-
-    return NextResponse.json(reports);
-  } catch (error) {
-    console.error("Error fetching reports:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch reports" },
-      { status: 500 }
-    );
+    const { data, error } = await query;
+    if (error) throw error;
+    return NextResponse.json(data || []);
+  } catch (e) {
+    console.error("Error fetching reports:", e);
+    return NextResponse.json({ error: "Failed to fetch reports" }, { status: 500 });
   }
 }
 
-// POST - Create new report (Teachers only)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "TEACHER") {
-      return NextResponse.json(
-        { error: "Unauthorized - Only Teachers can create reports" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-
+    const teacherId = session.user.teacherId;
+    if (!teacherId) return NextResponse.json({ error: "No teacher profile linked" }, { status: 403 });
     const body = await request.json();
-
-    // Validate required fields
     if (!body.title || !body.content || !body.type) {
-      return NextResponse.json(
-        { error: "Title, content, and report type are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Title, content, and type required" }, { status: 400 });
     }
-
-    // Validate report type
     if (!["WEEKLY", "MONTHLY"].includes(body.type)) {
-      return NextResponse.json(
-        { error: "Report type must be WEEKLY or MONTHLY" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Type must be WEEKLY or MONTHLY" }, { status: 400 });
     }
-
-    const report = await prisma.report.create({
-      data: {
-        title: body.title,
-        content: body.content,
-        type: body.type,
-        teacherId: session.user.id,
-      },
-      include: {
-        teacher: {
-          select: {
-            id: true,
-            teacherId: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json(report, { status: 201 });
-  } catch (error) {
-    console.error("Error creating report:", error);
-    return NextResponse.json(
-      { error: "Failed to create report" },
-      { status: 500 }
-    );
+    const { data, error } = await supabase
+      .from("Report")
+      .insert({ title: body.title, content: body.content, type: body.type, teacherId })
+      .select("*, Teacher(id, teacherId, firstName, lastName)")
+      .single();
+    if (error) throw error;
+    return NextResponse.json(data, { status: 201 });
+  } catch (e) {
+    console.error("Error creating report:", e);
+    return NextResponse.json({ error: "Failed to create report" }, { status: 500 });
   }
 }
-
