@@ -29,6 +29,7 @@ function NewTransactionForm() {
     type: "SCHOOL_FEE",
     amount: "",
     description: "",
+    paidForMonth: new Date().toISOString().slice(0, 7),
     date: new Date().toISOString().slice(0, 10),
     studentId: preselectedStudentId || "",
     photoUrl: "",
@@ -51,7 +52,18 @@ function NewTransactionForm() {
   }, [preselectedStudentId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((current) => {
+      if (name === "type") {
+        return {
+          ...current,
+          type: value,
+          paidForMonth: value === "SCHOOL_FEE" ? current.paidForMonth || new Date().toISOString().slice(0, 7) : "",
+        };
+      }
+
+      return { ...current, [name]: value };
+    });
   };
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,12 +92,17 @@ function NewTransactionForm() {
       showToast("error", "Select a student for fee payment");
       return;
     }
+    if (formData.type === "SCHOOL_FEE" && !formData.paidForMonth) {
+      showToast("error", "Select the month this school fee covers");
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         type: formData.type,
         amount,
         description: formData.description || null,
+        paidForMonth: formData.type === "SCHOOL_FEE" ? formData.paidForMonth : null,
         date: formData.date,
         studentId: formData.type === "WITHDRAWAL" ? null : formData.studentId || null,
         photoUrl: formData.photoUrl || null,
@@ -122,6 +139,19 @@ function NewTransactionForm() {
           <FormField label="Date" name="date" required>
             <input type="date" name="date" value={formData.date} onChange={handleChange} className="input-field" required disabled={saving} />
           </FormField>
+          {formData.type === "SCHOOL_FEE" && (
+            <FormField label="School Fee Month" name="paidForMonth" required hint="Select the month this payment covers.">
+              <input
+                type="month"
+                name="paidForMonth"
+                value={formData.paidForMonth}
+                onChange={handleChange}
+                className="input-field"
+                required
+                disabled={saving}
+              />
+            </FormField>
+          )}
           <FormSelect label="Student" name="studentId" value={formData.studentId} onChange={handleChange} options={[{ value: "", label: "Select student" }, ...studentOptions]} required />
           <FormTextarea label="Description" name="description" value={formData.description} onChange={handleChange} rows={2} />
           <FormField label="Receipt Photo (optional)" name="photoUrl">

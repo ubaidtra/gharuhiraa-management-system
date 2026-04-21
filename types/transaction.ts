@@ -10,6 +10,7 @@ export interface Transaction {
   type: TransactionType;
   amount: number;
   description?: string | null;
+  paidForMonth?: string | null;
   date: Date | string;
   photoUrl?: string | null;
   createdAt: Date | string;
@@ -23,6 +24,7 @@ export interface TransactionFormData {
   type: TransactionType;
   amount: number;
   description?: string;
+  paidForMonth?: string;
   studentId?: string;
   photoUrl?: string;
   date?: string;

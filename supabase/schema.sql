@@ -64,10 +64,13 @@ CREATE TABLE IF NOT EXISTS "Transaction" (
   description TEXT,
   date TIMESTAMP DEFAULT NOW(),
   "photoUrl" TEXT,
+  "paidForMonth" VARCHAR(7),
   "studentId" UUID REFERENCES "Student"(id) ON DELETE SET NULL,
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
+
+ALTER TABLE "Transaction" ADD COLUMN IF NOT EXISTS "paidForMonth" VARCHAR(7);
 
 CREATE TABLE IF NOT EXISTS "LearningRecord" (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

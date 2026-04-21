@@ -28,6 +28,21 @@ export function formatDateTime(date: Date | string): string {
   }).format(d);
 }
 
+export function formatMonthValue(monthValue: string): string {
+  const [year, month] = monthValue.split("-");
+  const monthNumber = Number(month);
+  const yearNumber = Number(year);
+
+  if (!year || !month || Number.isNaN(monthNumber) || Number.isNaN(yearNumber) || monthNumber < 1 || monthNumber > 12) {
+    return monthValue;
+  }
+
+  return new Intl.DateTimeFormat("en-GM", {
+    year: "numeric",
+    month: "long",
+  }).format(new Date(yearNumber, monthNumber - 1, 1));
+}
+
 export function calculateAge(dob: Date | string): number {
   const birth = typeof dob === "string" ? new Date(dob) : dob;
   const today = new Date();

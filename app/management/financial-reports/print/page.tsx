@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import LoadingPage from "@/components/LoadingPage";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency, formatMonthValue } from "@/lib/utils/format";
 import { TRANSACTION_TYPE_LABELS } from "@/lib/constants";
 
 function PrintContent() {
@@ -75,6 +75,7 @@ function PrintContent() {
               <th className="text-left py-2">Date</th>
               <th className="text-left py-2">Type</th>
               <th className="text-left py-2">Student</th>
+              <th className="text-left py-2">Paid For</th>
               <th className="text-right py-2">Amount</th>
             </tr>
           </thead>
@@ -84,6 +85,7 @@ function PrintContent() {
                 <td className="py-2">{new Date(t.date).toLocaleDateString()}</td>
                 <td>{TRANSACTION_TYPE_LABELS[t.type] || t.type}</td>
                 <td>{t.Student ? `${t.Student.firstName} ${t.Student.lastName}` : "-"}</td>
+                <td>{t.paidForMonth ? formatMonthValue(t.paidForMonth) : "-"}</td>
                 <td className="text-right text-green-600">{formatCurrency(Number(t.amount))}</td>
               </tr>
             ))}

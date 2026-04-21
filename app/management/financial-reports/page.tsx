@@ -7,7 +7,7 @@ import LoadingPage from "@/components/LoadingPage";
 import FormField from "@/components/FormField";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useToast } from "@/components/Toast";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency, formatMonthValue } from "@/lib/utils/format";
 import { TRANSACTION_TYPE_LABELS } from "@/lib/constants";
 
 export default function FinancialReportsPage() {
@@ -121,7 +121,7 @@ export default function FinancialReportsPage() {
                 <div className="table-container max-h-64 overflow-auto">
                   <table className="table">
                     <thead>
-                      <tr><th>Date</th><th>Type</th><th>Student</th><th>Amount</th></tr>
+                      <tr><th>Date</th><th>Type</th><th>Student</th><th>Paid For</th><th>Amount</th></tr>
                     </thead>
                     <tbody>
                       {(report.transactions?.revenue || []).slice(0, 20).map((t: any) => (
@@ -129,6 +129,7 @@ export default function FinancialReportsPage() {
                           <td>{new Date(t.date).toLocaleDateString()}</td>
                           <td>{TRANSACTION_TYPE_LABELS[t.type] || t.type}</td>
                           <td>{t.Student ? `${t.Student.firstName} ${t.Student.lastName}` : "-"}</td>
+                          <td>{t.paidForMonth ? formatMonthValue(t.paidForMonth) : "-"}</td>
                           <td className="text-green-600">{formatCurrency(Number(t.amount))}</td>
                         </tr>
                       ))}

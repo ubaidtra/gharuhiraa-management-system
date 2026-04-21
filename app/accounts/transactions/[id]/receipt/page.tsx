@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import { redirect } from "next/navigation";
 import LoadingPage from "@/components/LoadingPage";
 import { TRANSACTION_TYPE_LABELS } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency, formatMonthValue } from "@/lib/utils/format";
 
 export default function ReceiptPage() {
   const { data: session, status } = useSession();
@@ -52,6 +52,7 @@ export default function ReceiptPage() {
             <div className="flex justify-between"><span className="text-gray-500">Type</span><span>{TRANSACTION_TYPE_LABELS[transaction.type] || transaction.type}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Amount</span><span className="font-bold">{formatCurrency(Number(transaction.amount))}</span></div>
             {student && <div className="flex justify-between"><span className="text-gray-500">Student</span><span>{student.studentId} - {student.firstName} {student.lastName}</span></div>}
+            {transaction.paidForMonth && <div className="flex justify-between"><span className="text-gray-500">Paid For Month</span><span>{formatMonthValue(transaction.paidForMonth)}</span></div>}
             {transaction.description && <div className="flex justify-between"><span className="text-gray-500">Description</span><span>{transaction.description}</span></div>}
             {transaction.photoUrl && <div className="mt-4"><img src={transaction.photoUrl} alt="Receipt" className="max-w-full h-auto max-h-48 rounded print:max-h-96" /></div>}
           </div>

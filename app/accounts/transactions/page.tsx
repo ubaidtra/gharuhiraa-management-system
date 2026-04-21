@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import LoadingPage from "@/components/LoadingPage";
 import EmptyState from "@/components/EmptyState";
 import { TRANSACTION_TYPE_LABELS } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency, formatMonthValue } from "@/lib/utils/format";
 
 export default function TransactionsPage() {
   const { data: session, status } = useSession();
@@ -60,6 +60,7 @@ export default function TransactionsPage() {
                   <th>Date</th>
                   <th>Type</th>
                   <th>Student</th>
+                  <th>Paid For</th>
                   <th>Amount</th>
                   <th>Description</th>
                   <th>Actions</th>
@@ -71,6 +72,7 @@ export default function TransactionsPage() {
                     <td>{new Date(t.date).toLocaleDateString()}</td>
                     <td>{TRANSACTION_TYPE_LABELS[t.type] || t.type}</td>
                     <td>{studentName(t)}</td>
+                    <td>{t.paidForMonth ? formatMonthValue(t.paidForMonth) : "-"}</td>
                     <td className={isWithdrawal(t) ? "text-red-600" : "text-green-600"}>{isWithdrawal(t) ? "-" : ""}{formatCurrency(Number(t.amount))}</td>
                     <td className="max-w-[200px] truncate">{t.description || "-"}</td>
                     <td>

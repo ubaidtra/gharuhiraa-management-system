@@ -33,12 +33,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
     const body = await request.json();
+    const paidForMonth =
+      body.type === "SCHOOL_FEE" && typeof body.paidForMonth === "string" && /^\d{4}-\d{2}$/.test(body.paidForMonth)
+        ? body.paidForMonth
+        : null;
+
+    if (body.type === "SCHOOL_FEE" && !paidForMonth) {
+      return NextResponse.json({ error: "Select the month this school fee covers" }, { status: 400 });
+    }
+
     const { data, error } = await supabase
       .from("Transaction")
       .insert({
         type: body.type,
         amount: parseFloat(body.amount),
         description: body.description || null,
+        paidForMonth,
         date: body.date || new Date().toISOString(),
         photoUrl: body.photoUrl || null,
         studentId: body.studentId || null,

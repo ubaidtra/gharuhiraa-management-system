@@ -12,7 +12,7 @@ import FormSelect from "@/components/FormSelect";
 import FormTextarea from "@/components/FormTextarea";
 import { useToast } from "@/components/Toast";
 import { GENDER_LABELS } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency, formatMonthValue } from "@/lib/utils/format";
 
 export default function StudentDetailPage() {
   const { data: session, status } = useSession();
@@ -168,7 +168,12 @@ export default function StudentDetailPage() {
                   <div className="space-y-2">
                     {(student.transactions || []).slice(0, 5).map((t: any) => (
                       <div key={t.id} className="flex justify-between text-sm">
-                        <span>{t.type} - {new Date(t.date).toLocaleDateString()}</span>
+                        <span>
+                          {t.type}
+                          {t.paidForMonth ? ` (${formatMonthValue(t.paidForMonth)})` : ""}
+                          {" - "}
+                          {new Date(t.date).toLocaleDateString()}
+                        </span>
                         <span className="font-medium">{formatCurrency(Number(t.amount))}</span>
                       </div>
                     ))}
