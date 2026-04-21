@@ -129,8 +129,8 @@ function NewTransactionForm() {
             {formData.photoUrl && <p className="text-sm text-green-600 mt-1">Uploaded. <button type="button" onClick={() => setFormData((f) => ({ ...f, photoUrl: "" }))} className="text-red-600">Remove</button></p>}
           </FormField>
           <div className="flex gap-2">
-            <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2">
-              {saving ? <LoadingSpinner size="sm" /> : null} Record
+            <button type="submit" disabled={saving || uploading} className="btn-primary flex items-center gap-2">
+              {saving || uploading ? <LoadingSpinner size="sm" /> : null} {uploading ? "Uploading..." : "Record"}
             </button>
             <Link href="/accounts/transactions" className="btn-secondary">Cancel</Link>
           </div>

@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { redirect } from "next/navigation";
 import LoadingPage from "@/components/LoadingPage";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -18,7 +18,6 @@ export default function StudentDetailPage() {
   const { data: session, status } = useSession();
   const { showToast } = useToast();
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
   const [student, setStudent] = useState<any>(null);
   const [halaqas, setHalaqas] = useState<any[]>([]);
@@ -54,7 +53,7 @@ export default function StudentDetailPage() {
         .catch(() => showToast("error", "Failed to load student"))
         .finally(() => setLoading(false));
     }
-  }, [session, id]);
+  }, [session, id, showToast]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

@@ -1,223 +1,80 @@
-# Testing Guide - Cave of Hiraa School Management System
+# Testing Guide
 
-## System Overview
+## Local URL
 
-The Cave of Hiraa School Management System is now fully operational and ready for testing. The application is running at **http://localhost:3000**.
+- Development: `http://localhost:5008`
 
----
+## Automated Checks
 
-## Test Credentials
+Run these before manual testing:
 
-| Role | Username | Password |
-|------|----------|----------|
-| **Management** | `management` | `management123` |
-| **Accounts** | `accounts` | `accounts123` |
-| **Teacher** | `teacher` | `teacher123` |
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
 
----
+## Manual UAT
 
-## Verification Scenarios
+### 1. Bootstrap
+1. Open `/signup` on a fresh database.
+2. Confirm only `Accounts & Admin` can be created as the first user.
+3. Create the first account and verify automatic sign-in lands on `/accounts`.
 
-### 1. Authentication & Role-Based Access
+### 2. Accounts admin workflow
+1. Log in as an Accounts user.
+2. Create a teacher profile in `Accounts -> Teachers`.
+3. Open `Accounts -> User Management`.
+4. Create:
+   - one `MANAGEMENT` user
+   - one `TEACHER` user linked to the teacher profile
+5. Change a username and reset a password from the same screen.
+6. Verify the Accounts settings page allows password change.
 
-#### Test Login Flows
-1. **Navigate to**: http://localhost:3000
-2. **Expected**: Automatic redirect to `/login` page
-3. **Test each role**:
-   - Login with each credential set above
-   - Verify successful authentication
-   - Check that you're redirected to the appropriate dashboard
+### 3. Student and halaqa workflow
+1. Create a student.
+2. Create a halaqa and assign the teacher profile.
+3. Verify the student can be attached to the halaqa.
+4. Confirm the teacher now sees the assigned halaqa.
 
-#### Verify Role-Based Navigation
-- **Management User**: Should see Dashboard, Students, Teachers, Statistics in navbar
-- **Accounts User**: Should see Dashboard, Students, Teachers, Transactions in navbar
-- **Teacher User**: Should see Dashboard, My Halaqa, Learning Records in navbar
+### 4. Transaction and withdrawal workflow
+1. Record a payment with a receipt image.
+2. Open the payment receipt page and verify the uploaded image renders.
+3. Record a withdrawal with a receipt image.
+4. Open `Accounts -> Withdrawals` and verify the uploaded evidence link opens.
 
----
+### 5. Teacher workflow
+1. Log in as the linked teacher user.
+2. Verify access to:
+   - `Teachers -> My Halaqa`
+   - `Teachers -> Learning Records`
+   - `Teachers -> Reports`
+3. Create a learning record for a student in the assigned halaqa.
+4. Submit a report.
 
-### 2. Accounts User Testing
+### 6. Management workflow
+1. Log in as the Management user.
+2. Verify the dashboard, statistics, financial reports, and reports pages load.
+3. Open the management settings page and verify password change works.
+4. Open the teacher report and verify read-only oversight is preserved.
 
-#### Scenario A: Student Registration
-1. **Login as**: `accounts` / `accounts123`
-2. **Navigate to**: Accounts Dashboard → "Register New Student"
-3. **Fill in the form**:
-   - First Name: `Yusuf`
-   - Father Name: `Hassan`
-   - Last Name: `Rahman`
-   - Date of Birth: `2013-05-10`
-   - Gender: `Male`
-   - Address: `123 Test Street`
-   - Phone: `555-9999`
-4. **Submit** and verify student appears in Students list
-5. **Expected Result**: ✅ Student created successfully
+### 7. Permission boundaries
+Verify these direct URL checks:
 
-#### Scenario B: Teacher Registration
-1. **Navigate to**: Accounts → Teachers → "Add New Teacher"
-2. **Fill in the form**:
-   - First Name: `Khadija`
-   - Last Name: `Ibrahim`
-   - Gender: `Female`
-   - Date of Birth: `1988-12-20`
-   - Employment Type: `Full Time`
-   - Certificate: `Ijazah in Warsh`
-   - Address: `456 Teacher Lane`
-3. **Submit** and verify teacher appears in Teachers list
-4. **Expected Result**: ✅ Teacher created successfully
+- Accounts cannot access teacher-only pages.
+- Teachers cannot access accounts transaction pages.
+- Management cannot access create or edit flows in accounts or teacher areas.
 
-#### Scenario C: Recording Fees
-1. **Navigate to**: Accounts → Transactions → "Record Transaction"
-2. **Test Registration Fee**:
-   - Type: `Registration Fee`
-   - Amount: `50.00`
-   - Student: Select any student
-   - Date: Today's date
-3. **Submit** and verify transaction appears in list
-4. **Repeat for other fee types**: School Fee, Uniform Fee
-5. **Expected Result**: ✅ All transactions recorded correctly
+## Release Sign-Off
 
-#### Scenario D: Recording Withdrawal
-1. **Navigate to**: Accounts → Transactions → "Record Transaction"
-2. **Fill withdrawal**:
-   - Type: `Withdrawal`
-   - Amount: `150.00`
-   - Description: `Office supplies purchase`
-   - Student: Leave blank (optional for withdrawals)
-3. **Submit** and verify withdrawal appears
-4. **Expected Result**: ✅ Withdrawal recorded with negative amount display
+Consider a release ready when:
 
-#### Scenario E: Permission Verification
-1. **While logged as Accounts**:
-   - Try to access `/teachers` URL directly
-   - **Expected**: ✅ Redirected or access denied
-2. **Verify you CANNOT see**:
-   - Learning Records
-   - Teacher-specific pages
-
----
-
-### 3. Teacher User Testing
-
-#### Scenario A: Create Halaqa
-1. **Login as**: `teacher` / `teacher123`
-2. **Navigate to**: Teachers Dashboard → "Create New Halaqa"
-3. **Fill in the form**:
-   - Halaqa Name: `Advanced Group C`
-   - Student Level: `Advanced`
-   - Teacher: Select a teacher
-4. **Submit** and verify halaqa appears
-5. **Expected Result**: ✅ Halaqa created successfully
-
-#### Scenario B: Assign Students to Halaqa
-1. **Navigate to**: Teachers → My Halaqa → Select a halaqa
-2. **Click "Manage Students"**
-3. **Add a student**:
-   - Select an unassigned student from dropdown
-   - Click "Add Student"
-4. **Verify student appears** in "Current Students" list
-5. **Test removal**: Click "Remove" on a student
-6. **Expected Result**: ✅ Students can be added/removed from halaqa
-
-#### Scenario C: Weekly Learning Record Entry
-1. **Navigate to**: Teachers → Learning Records → "Add Weekly Record"
-2. **Fill comprehensive learning data**:
-   - **Student**: Select a student
-   - **Teacher**: Select a teacher
-   - **Week Start Date**: Last Monday's date
-   - **Attendance**: `6` days
-   - **Memorization Section**:
-     - Surah: `Al-Kahf`
-     - Daily Dars: `Ayah 50-60`
-     - Memorized Days: `5`
-     - Not Memorized Days: `1`
-     - Rubu Amount: `0.75`
-   - **Review Section**:
-     - Murajaa From: `Al-Mulk`
-     - Murajaa To: `Al-Mulk`
-     - Murajaa Days: `6`
-     - Murajaa Not Days: `0`
-   - **Notes**: `Excellent progress this week`
-3. **Submit** and verify record appears in list
-4. **Expected Result**: ✅ Learning record saved with all details
-
-#### Scenario D: View Learning Progress
-1. **Navigate to**: Teachers → Learning Records
-2. **Verify**:
-   - All records display correctly
-   - Filter by week date works
-   - Student names show properly
-   - Memorization and review stats visible
-3. **Expected Result**: ✅ Learning records displayed accurately
-
-#### Scenario E: Permission Verification
-1. **While logged as Teacher**:
-   - Try to access `/accounts/transactions` URL
-   - **Expected**: ✅ Redirected or access denied
-2. **Verify you CANNOT see**:
-   - Financial transactions
-   - Student registration forms
-   - Teacher management
-
----
-
-### 4. Management User Testing
-
-#### Scenario A: View Dashboard Statistics
-1. **Login as**: `management` / `management123`
-2. **Verify Dashboard shows**:
-   - Total Students count
-   - Total Teachers count
-   - Total Halaqas count
-   - Net Balance (Revenue - Withdrawals)
-   - Learning progress metrics
-   - Halaqas overview table
-3. **Expected Result**: ✅ All statistics display correctly
-
-#### Scenario B: View Students (Read-Only)
-1. **Navigate to**: Management → Students
-2. **Verify**:
-   - "View Only" badge is visible
-   - All students are listed
-   - Search functionality works
-   - **NO** edit/delete buttons visible
-   - **NO** "Add Student" button
-3. **Expected Result**: ✅ Read-only access enforced
-
-#### Scenario C: View Teachers (Read-Only)
-1. **Navigate to**: Management → Teachers
-2. **Verify**:
-   - "View Only" badge is visible
-   - All teachers listed with details
-   - Employment types displayed
-   - Number of halaqas and students shown
-   - **NO** edit capabilities
-3. **Expected Result**: ✅ Read-only access enforced
-
-#### Scenario D: Detailed Statistics
-1. **Navigate to**: Management → Statistics
-2. **Verify comprehensive metrics**:
-   - **Financial Overview**:
-     - Total Revenue
-     - Total Withdrawals
-     - Net Balance
-   - **Enrollment Statistics**:
-     - Student/Teacher/Halaqa counts
-   - **Learning Progress Metrics**:
-     - Total Memorized Days
-     - Total Murajaa Days
-     - Total Rubu Completed
-     - Average memorized per week
-   - **Halaqa Distribution**:
-     - Each halaqa with student count
-     - Percentage distribution
-3. **Expected Result**: ✅ All statistics calculated correctly
-
-#### Scenario E: Permission Verification
-1. **While logged as Management**:
-   - Try to access `/accounts/students/new`
-   - **Expected**: ✅ Redirected or access denied
-2. **Try to access**: `/teachers/learning-records/new`
-   - **Expected**: ✅ Redirected or access denied
-3. **Verify you CANNOT**:
+- lint, typecheck, tests, and build all pass
+- receipt uploads persist through Supabase Storage
+- Accounts can create and link users without manual database edits
+- all settings pages are functional
+- role-based manual UAT completes without blockers
    - Edit any student records
    - Create transactions
    - Add learning records

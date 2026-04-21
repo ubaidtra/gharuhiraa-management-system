@@ -11,7 +11,6 @@ export default function LearningRecordsPage() {
   const { data: session, status } = useSession();
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [studentFilter, setStudentFilter] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") redirect("/login");
@@ -20,10 +19,9 @@ export default function LearningRecordsPage() {
 
   useEffect(() => {
     if (session?.user.role === "TEACHER") {
-      const url = studentFilter ? `/api/learning-records?studentId=${studentFilter}` : "/api/learning-records";
-      fetch(url).then((r) => r.json()).then(setRecords).catch(console.error).finally(() => setLoading(false));
+      fetch("/api/learning-records").then((r) => r.json()).then(setRecords).catch(console.error).finally(() => setLoading(false));
     }
-  }, [session, studentFilter]);
+  }, [session]);
 
   if (loading || status === "loading") return <LoadingPage message="Loading records..." />;
 

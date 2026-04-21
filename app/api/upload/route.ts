@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { existsSync } from "fs";
+import { RECEIPT_UPLOAD_BUCKET, supabase } from "@/lib/supabase";
+import {
+  ensureReceiptBucket,
+  getReceiptPublicUrl,
+} from "@/lib/utils/storage";
+import { buildReceiptObjectPath, validateReceiptFile } from "@/lib/utils/receiptUpload";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -15,23 +18,26 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File;
     if (!file) return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
 
-    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
-    if (!validTypes.includes(file.type)) {
-      return NextResponse.json({ error: "Invalid file type. Use JPEG, PNG, GIF, or WebP" }, { status: 400 });
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "File too large. Max 5MB" }, { status: 400 });
+    const validation = validateReceiptFile(file);
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    const ext = file.name.split(".").pop();
-    const filename = `check_${Date.now()}_${Math.random().toString(36).slice(2, 9)}.${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "checks");
-    if (!existsSync(uploadDir)) await mkdir(uploadDir, { recursive: true });
+    await ensureReceiptBucket();
 
-    const bytes = await file.arrayBuffer();
-    await writeFile(path.join(uploadDir, filename), Buffer.from(bytes));
+    const storagePath = buildReceiptObjectPath(file.name);
+    const { error } = await supabase.storage
+      .from(RECEIPT_UPLOAD_BUCKET)
+      .upload(storagePath, file, { contentType: file.type, upsert: false });
+    if (error) throw error;
 
-    return NextResponse.json({ success: true, url: `/uploads/checks/${filename}`, filename });
+    return NextResponse.json({
+      success: true,
+      url: getReceiptPublicUrl(storagePath),
+      filename: storagePath.split("/").pop(),
+      path: storagePath,
+      bucket: RECEIPT_UPLOAD_BUCKET,
+    });
   } catch (e) {
     console.error("Upload error:", e);
     return NextResponse.json({ error: "Failed to upload file" }, { status: 500 });

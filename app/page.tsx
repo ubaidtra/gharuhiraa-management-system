@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { isRedirectError } from "@/lib/utils/errors";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   try {
     const session = await getServerSession(authOptions);

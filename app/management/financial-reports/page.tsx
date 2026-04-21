@@ -2,7 +2,6 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import LoadingPage from "@/components/LoadingPage";
 import FormField from "@/components/FormField";

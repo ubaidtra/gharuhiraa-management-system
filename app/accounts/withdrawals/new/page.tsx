@@ -20,7 +20,9 @@ export default function NewWithdrawalPage() {
     amount: "",
     description: "",
     date: new Date().toISOString().slice(0, 10),
+    photoUrl: "",
   });
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") redirect("/login");
@@ -29,6 +31,28 @@ export default function NewWithdrawalPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setFormData((prev) => ({ ...prev, photoUrl: data.url }));
+      } else {
+        showToast("error", data.error || "Upload failed");
+      }
+    } catch {
+      showToast("error", "Upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +73,7 @@ export default function NewWithdrawalPage() {
           description: formData.description || null,
           date: formData.date,
           studentId: null,
+          photoUrl: formData.photoUrl || null,
         }),
       });
       const data = await res.json();
@@ -75,9 +100,20 @@ export default function NewWithdrawalPage() {
             <input type="date" name="date" value={formData.date} onChange={handleChange} className="input-field" required disabled={saving} />
           </FormField>
           <FormTextarea label="Description" name="description" value={formData.description} onChange={handleChange} rows={3} placeholder="Purpose of withdrawal" />
+          <FormField label="Receipt Photo (optional)" name="photoUrl">
+            <input type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploading || saving} className="input-field" />
+            {formData.photoUrl && (
+              <p className="text-sm text-green-600 mt-1">
+                Uploaded.{" "}
+                <button type="button" onClick={() => setFormData((prev) => ({ ...prev, photoUrl: "" }))} className="text-red-600">
+                  Remove
+                </button>
+              </p>
+            )}
+          </FormField>
           <div className="flex gap-2">
-            <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2">
-              {saving ? <LoadingSpinner size="sm" /> : null} Record
+            <button type="submit" disabled={saving || uploading} className="btn-primary flex items-center gap-2">
+              {saving || uploading ? <LoadingSpinner size="sm" /> : null} {uploading ? "Uploading..." : "Record"}
             </button>
             <Link href="/accounts/withdrawals" className="btn-secondary">Cancel</Link>
           </div>

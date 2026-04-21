@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import bcrypt from "bcryptjs";
+import {
+  validateBootstrapRole,
+  validatePassword,
+  validateUsername,
+} from "@/lib/utils/validation";
 
 export async function GET() {
   try {
@@ -23,11 +28,21 @@ export async function POST(request: NextRequest) {
     if (!username || !password || !role) {
       return NextResponse.json({ error: "Username, password, and role are required" }, { status: 400 });
     }
-    if (username.length < 3) return NextResponse.json({ error: "Username must be at least 3 characters" }, { status: 400 });
-    if (password.length < 6) return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
 
-    const validRoles = ["MANAGEMENT", "ACCOUNTS", "TEACHER"];
-    if (!validRoles.includes(role)) return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    const usernameValidation = validateUsername(String(username));
+    if (!usernameValidation.valid) {
+      return NextResponse.json({ error: usernameValidation.error }, { status: 400 });
+    }
+
+    const passwordValidation = validatePassword(String(password));
+    if (!passwordValidation.valid) {
+      return NextResponse.json({ error: passwordValidation.error }, { status: 400 });
+    }
+
+    const bootstrapRoleValidation = validateBootstrapRole(String(role));
+    if (!bootstrapRoleValidation.valid) {
+      return NextResponse.json({ error: bootstrapRoleValidation.error }, { status: 400 });
+    }
 
     const { data: existing } = await supabase.from("User").select("id").eq("username", username).maybeSingle();
     if (existing) return NextResponse.json({ error: "Username already exists" }, { status: 400 });

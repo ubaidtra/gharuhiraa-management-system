@@ -41,6 +41,7 @@ export default function WithdrawalsPage() {
                   <th>Date</th>
                   <th>Amount</th>
                   <th>Description</th>
+                  <th>Receipt</th>
                 </tr>
               </thead>
               <tbody>
@@ -49,6 +50,15 @@ export default function WithdrawalsPage() {
                     <td>{new Date(t.date).toLocaleDateString()}</td>
                     <td className="text-red-600 font-medium">-{formatCurrency(Number(t.amount))}</td>
                     <td className="max-w-[300px] truncate">{t.description || "-"}</td>
+                    <td>
+                      {t.photoUrl ? (
+                        <a href={t.photoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-sm">
+                          View
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

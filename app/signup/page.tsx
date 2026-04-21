@@ -49,8 +49,7 @@ export default function SignupPage() {
         setError("Account created. Please log in.");
         setTimeout(() => router.push("/login"), 2000);
       } else if (result?.ok) {
-        const target = role === "ACCOUNTS" ? "/accounts" : role === "MANAGEMENT" ? "/management" : "/teachers";
-        window.location.href = target;
+        window.location.href = "/accounts";
       }
     } catch {
       setError("An error occurred.");
@@ -91,7 +90,7 @@ export default function SignupPage() {
         <div className="text-center mb-8">
           <img src="/logo.jpg" alt="Logo" className="w-24 h-24 rounded-full mx-auto mb-4 shadow-lg border-4 border-blue-100" />
           <h1 className="text-3xl font-bold text-gray-800">Gharu Hiraa</h1>
-          <p className="text-gray-600 mt-2">Create Admin Account (one-time setup)</p>
+          <p className="text-gray-600 mt-2">Create the first Accounts admin (one-time setup)</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
           <FormField label="Username" name="username" required>
@@ -106,10 +105,9 @@ export default function SignupPage() {
           <FormField label="Role" name="role" required>
             <select id="role" value={role} onChange={(e) => setRole(e.target.value)} className="input-field" disabled={loading}>
               <option value="ACCOUNTS">Accounts & Admin</option>
-              <option value="MANAGEMENT">Management</option>
-              <option value="TEACHER">Teacher</option>
             </select>
           </FormField>
+          <p className="text-sm text-gray-500 -mt-2">The first account must be able to create users, manage records, and finish initial setup.</p>
           {error && <ErrorMessage message={error} />}
           <button type="submit" disabled={loading} className="w-full btn-primary flex items-center justify-center">
             {loading ? <><LoadingSpinner size="sm" className="mr-2" />Creating...</> : "Create Account"}

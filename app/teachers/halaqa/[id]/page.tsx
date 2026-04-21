@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { redirect } from "next/navigation";
@@ -29,7 +29,7 @@ export default function TeacherHalaqaDetailPage() {
     if (session?.user.role !== "TEACHER") redirect("/");
   }, [session, status]);
 
-  const load = () => {
+  const load = useCallback(() => {
     if (session?.user.role === "TEACHER" && id) {
       Promise.all([
         fetch(`/api/halaqas/${id}`).then((r) => r.json()),
@@ -39,11 +39,11 @@ export default function TeacherHalaqaDetailPage() {
         setUnassignedStudents(unassigned || []);
       }).catch(console.error).finally(() => setLoading(false));
     }
-  };
+  }, [id, session]);
 
   useEffect(() => {
     load();
-  }, [session, id]);
+  }, [load]);
 
   const students = halaqa?.Student || halaqa?.students || [];
 

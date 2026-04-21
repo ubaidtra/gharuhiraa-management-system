@@ -3,9 +3,16 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { supabase } from "@/lib/supabase";
 
+const devFallbackSecret = "cave-of-hiraa-dev-secret";
+const nextAuthSecret = process.env.NEXTAUTH_SECRET;
+
+if (process.env.NODE_ENV === "production" && !nextAuthSecret) {
+  throw new Error("NEXTAUTH_SECRET must be set in production");
+}
+
 export const authOptions: NextAuthOptions = {
   debug: process.env.NODE_ENV === "development",
-  secret: process.env.NEXTAUTH_SECRET || "cave-of-hiraa-secret-change-in-production",
+  secret: nextAuthSecret || devFallbackSecret,
   providers: [
     CredentialsProvider({
       name: "Credentials",
